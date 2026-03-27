@@ -13,6 +13,8 @@ function statusClass(status: string): string {
     case "rider_assigned":
     case "searching_rider":
       return `${base} bg-blue-100 text-blue-800`;
+    case "awaiting_rider_response":
+      return `${base} bg-purple-100 text-purple-800`;
     case "scheduled":
     case "pending":
       return `${base} bg-amber-100 text-amber-800`;

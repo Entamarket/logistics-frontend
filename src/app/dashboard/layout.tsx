@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { TopBar } from "@/components/TopBar";
+import { NotificationProvider, useNotifications } from "@/contexts/NotificationContext";
 
 const clientNavItems = [
   { href: "/dashboard", label: "Overview" },
@@ -13,8 +14,9 @@ const clientNavItems = [
   { href: "/dashboard/profile", label: "Profile setting" },
 ];
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { unreadCount } = useNotifications();
 
   return (
     <div className="min-h-screen min-h-[100dvh] bg-[#ffffff] flex flex-col safe-area-inset">
@@ -25,11 +27,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           brandHref="/dashboard"
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
+          badgeByHref={{ "/dashboard/notifications": unreadCount }}
         />
         <main className="flex-1 min-w-0 p-4 md:p-6 lg:p-8 md:ml-56">
           {children}
         </main>
       </div>
     </div>
+  );
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <NotificationProvider>
+      <DashboardLayoutInner>{children}</DashboardLayoutInner>
+    </NotificationProvider>
   );
 }

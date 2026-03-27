@@ -36,6 +36,9 @@ export default function CreateShipmentPage() {
   const [sender, setSender] = useState({ fullName: "", address: "", phone: "" });
   const [recipient, setRecipient] = useState({ fullName: "", address: "", phone: "" });
   const [pkg, setPkg] = useState({ type: "", weight: "", dimensions: "", quantity: "", note: "" });
+  const [pickupLongitude, setPickupLongitude] = useState("");
+  const [pickupLatitude, setPickupLatitude] = useState("");
+  const [geoLoading, setGeoLoading] = useState(false);
   const [estimatedCost, setEstimatedCost] = useState<number | null>(null);
   const [calculatorMessage, setCalculatorMessage] = useState("");
 
@@ -49,6 +52,19 @@ export default function CreateShipmentPage() {
     if (isNaN(weight) || weight < 0 || isNaN(dimensions) || dimensions < 0 || isNaN(quantity) || quantity < 1) {
       setError("Please enter valid weight, dimensions, and quantity.");
       return;
+    }
+
+    if (deliveryType === "instant") {
+      const lng = parseFloat(pickupLongitude);
+      const lat = parseFloat(pickupLatitude);
+      if (pickupLongitude.trim() === "" || pickupLatitude.trim() === "") {
+        setError("Pickup longitude and latitude are required for instant delivery so we can assign the nearest rider.");
+        return;
+      }
+      if (Number.isNaN(lng) || Number.isNaN(lat) || lng < -180 || lng > 180 || lat < -90 || lat > 90) {
+        setError("Enter valid pickup coordinates (longitude -180 to 180, latitude -90 to 90).");
+        return;
+      }
     }
 
     if (deliveryType === "scheduled") {
@@ -101,6 +117,10 @@ export default function CreateShipmentPage() {
       payload.pickupWindowStart = start.toISOString();
       payload.pickupWindowEnd = end.toISOString();
     }
+    if (deliveryType === "instant") {
+      payload.pickupLongitude = parseFloat(pickupLongitude);
+      payload.pickupLatitude = parseFloat(pickupLatitude);
+    }
     const res = await createShipment(payload);
     setLoading(false);
 
@@ -122,6 +142,27 @@ export default function CreateShipmentPage() {
       return;
     }
     setError(res.message);
+  }
+
+  function handleUsePickupLocation() {
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported in this browser.");
+      return;
+    }
+    setGeoLoading(true);
+    setError("");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setPickupLongitude(String(pos.coords.longitude));
+        setPickupLatitude(String(pos.coords.latitude));
+        setGeoLoading(false);
+      },
+      () => {
+        setError("Could not read your location. Enter coordinates manually.");
+        setGeoLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
   }
 
   function handleCalculateCost() {
@@ -287,6 +328,53 @@ export default function CreateShipmentPage() {
               </label>
             </div>
           </fieldset>
+          {deliveryType === "instant" && (
+            <div className="space-y-4 pt-2 rounded-lg border border-neutral-200 bg-neutral-50/80 p-4">
+              <p className="text-sm text-neutral-600">
+                Pickup coordinates (WGS84) are used to assign the nearest available rider. Example for Lagos: latitude 6.52, longitude 3.38.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="pickup-lng" className={labelClass}>
+                    Pickup longitude
+                  </label>
+                  <input
+                    id="pickup-lng"
+                    type="number"
+                    step="any"
+                    required={deliveryType === "instant"}
+                    value={pickupLongitude}
+                    onChange={(e) => setPickupLongitude(e.target.value)}
+                    className={inputClass}
+                    placeholder="3.3792"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="pickup-lat" className={labelClass}>
+                    Pickup latitude
+                  </label>
+                  <input
+                    id="pickup-lat"
+                    type="number"
+                    step="any"
+                    required={deliveryType === "instant"}
+                    value={pickupLatitude}
+                    onChange={(e) => setPickupLatitude(e.target.value)}
+                    className={inputClass}
+                    placeholder="6.5244"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleUsePickupLocation}
+                disabled={geoLoading}
+                className="text-sm font-medium text-[#81007f] hover:underline disabled:opacity-60"
+              >
+                {geoLoading ? "Getting location…" : "Use my current location"}
+              </button>
+            </div>
+          )}
           {deliveryType === "scheduled" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <div>

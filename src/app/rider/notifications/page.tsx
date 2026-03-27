@@ -1,5 +1,5 @@
 import { NotificationsPanel } from "@/components/NotificationsPanel";
 
-export default function ClientNotificationsPage() {
+export default function RiderNotificationsPage() {
   return <NotificationsPanel />;
 }

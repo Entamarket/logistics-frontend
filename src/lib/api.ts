@@ -1,8 +1,20 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
+/** WebSocket URL for the same host as the API (path /ws). */
+export function getWebSocketBaseUrl(): string {
+  const base = API_BASE.replace(/\/$/, "");
+  if (base.startsWith("https://")) {
+    return `wss://${base.slice("https://".length)}`;
+  }
+  if (base.startsWith("http://")) {
+    return `ws://${base.slice("http://".length)}`;
+  }
+  return `ws://${base}`;
+}
 
 export type ApiResponse<T = unknown> =
   | { success: true; data: T; message?: string }
-  | { success: false; message: string };
+  | { success: false; message: string; code?: string };
 
 export async function api<T>(
   path: string,
@@ -19,9 +31,11 @@ export async function api<T>(
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
+    const body = json as { message?: string; code?: string };
     return {
       success: false,
-      message: (json as { message?: string }).message || res.statusText || "Request failed",
+      message: body.message || res.statusText || "Request failed",
+      ...(body.code ? { code: body.code } : {}),
     };
   }
   return json as ApiResponse<T>;

@@ -30,7 +30,12 @@ export default function LoginPage() {
       router.refresh();
       return;
     }
-    setError(res.message);
+    if (!res.success && res.code === "EMAIL_NOT_VERIFIED") {
+      router.push(`/auth/verify-email?email=${encodeURIComponent(email.trim())}`);
+      router.refresh();
+      return;
+    }
+    setError(res.message ?? "Sign in failed");
   }
 
   return (

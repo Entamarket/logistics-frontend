@@ -8,12 +8,18 @@ export interface RiderUserRef {
   phone: string;
 }
 
+export interface RiderLocation {
+  type: "Point";
+  coordinates: [number, number];
+}
+
 export interface RiderData {
   _id: string;
   userId: RiderUserRef | string;
   status: string;
   isAvailable: boolean;
   isVerified: boolean;
+  location?: RiderLocation;
   createdAt: string;
   updatedAt: string;
 }
@@ -54,6 +60,16 @@ export async function updateRider(id: string, payload: UpdateRiderPayload) {
 
 export async function updateRiderStatus(id: string, status: "active" | "suspended" | "blocked") {
   return apiPatch<RiderData>(`/api/riders/${id}/status`, { status });
+}
+
+/** Rider-only: current rider profile (includes location when set). */
+export async function getMyRiderProfile() {
+  return apiGet<RiderData>("/api/riders/me");
+}
+
+/** Rider-only: update current GPS position (GeoJSON: longitude, latitude). */
+export async function updateMyRiderLocation(longitude: number, latitude: number) {
+  return apiPatch<RiderData>("/api/riders/me/location", { longitude, latitude });
 }
 
 export function getRiderDisplayName(rider: RiderData): string {
