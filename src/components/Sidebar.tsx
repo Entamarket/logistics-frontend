@@ -61,12 +61,12 @@ export function Sidebar({
       )}
 
       <aside
-        className={`w-56 flex-shrink-0 bg-[#81007f] text-white flex flex-col fixed left-0 z-20 transform transition-transform duration-200 ease-out pb-6 ${isControlled ? "top-14 md:top-0 md:inset-y-0" : "inset-y-0"} pt-14 md:pt-6 ${sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
+        className={`w-56 flex-shrink-0 bg-[#81007f] text-white flex flex-col fixed left-0 z-20 transform transition-transform duration-200 ease-out pb-6 min-h-0 ${isControlled ? "top-14 bottom-0 md:top-0 md:bottom-0 md:inset-y-0" : "inset-y-0"} pt-14 md:pt-6 ${sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
-        <Link href={brandHref} className="px-4 py-2 text-lg font-bold text-white hover:underline hidden md:block" onClick={() => setSidebarOpen(false)}>
+        <Link href={brandHref} className="px-4 py-2 text-lg font-bold text-white hover:underline hidden md:block shrink-0" onClick={() => setSidebarOpen(false)}>
           Logistics
         </Link>
-        <nav className="flex-1 mt-4 px-2 space-y-0.5">
+        <nav className="flex-1 min-h-0 mt-4 px-2 space-y-0.5 overflow-y-auto overscroll-contain">
           {navItems.map(({ href, label }) => {
             const basePath = brandHref.replace(/\/$/, "") || "/";
             const isActive = pathname === href || (href !== basePath && pathname.startsWith(href));
@@ -90,7 +90,7 @@ export function Sidebar({
             );
           })}
         </nav>
-        <Link href="/" className="px-4 py-2 text-sm text-white/80 hover:text-white mt-auto" onClick={() => setSidebarOpen(false)}>
+        <Link href="/" className="px-4 py-2 text-sm text-white/80 hover:text-white mt-auto shrink-0" onClick={() => setSidebarOpen(false)}>
           Back to home
         </Link>
       </aside>

@@ -11,10 +11,14 @@ import {
 } from "react";
 import { getUnreadNotificationCount, getWsToken, buildNotificationsWebSocketUrl } from "@/lib/notifications-api";
 
+export type RiderLocationPoint = { longitude: number; latitude: number };
+
 export type NotificationContextValue = {
   unreadCount: number;
   refreshUnread: () => Promise<void>;
   connected: boolean;
+  /** Latest rider GPS per shipment (from WebSocket `rider_location`). */
+  riderLocationByShipmentId: Record<string, RiderLocationPoint>;
 };
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
@@ -34,6 +38,9 @@ export function useNotificationsOptional(): NotificationContextValue | null {
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [connected, setConnected] = useState(false);
+  const [riderLocationByShipmentId, setRiderLocationByShipmentId] = useState<
+    Record<string, RiderLocationPoint>
+  >({});
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
@@ -67,11 +74,27 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         };
         ws.onmessage = (ev) => {
           try {
-            const msg = JSON.parse(String(ev.data)) as { event?: string; count?: number };
+            const msg = JSON.parse(String(ev.data)) as {
+              event?: string;
+              count?: number;
+              shipmentId?: string;
+              longitude?: number;
+              latitude?: number;
+            };
             if (msg.event === "unread_count" && typeof msg.count === "number") {
               setUnreadCount(msg.count);
             } else if (msg.event === "notification") {
               void refreshUnread();
+            } else if (
+              msg.event === "rider_location" &&
+              typeof msg.shipmentId === "string" &&
+              typeof msg.longitude === "number" &&
+              typeof msg.latitude === "number"
+            ) {
+              setRiderLocationByShipmentId((prev) => ({
+                ...prev,
+                [msg.shipmentId!]: { longitude: msg.longitude!, latitude: msg.latitude! },
+              }));
             }
           } catch {
             /* ignore malformed */
@@ -104,6 +127,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     unreadCount,
     refreshUnread,
     connected,
+    riderLocationByShipmentId,
   };
 
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;

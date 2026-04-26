@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getShipments, type ShipmentData } from "@/lib/shipment-api";
+import { ClientActiveShipmentMap } from "@/components/maps/ClientActiveShipmentMap";
 
 const TERMINAL_STATUSES = new Set(["delivered", "cancelled"]);
 
@@ -119,6 +120,9 @@ export default function ActiveShipmentPage() {
                 <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                   Waiting for a rider to accept the offer by {formatDate(s.riderResponseDeadline)}.
                 </p>
+              )}
+              {s.riderID && s.status !== "delivered" && s.status !== "cancelled" && (
+                <ClientActiveShipmentMap shipment={s} />
               )}
               <div className="grid gap-2 sm:grid-cols-2 text-sm text-neutral-600">
                 <div>

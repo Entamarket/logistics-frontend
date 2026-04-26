@@ -38,6 +38,8 @@ export default function CreateShipmentPage() {
   const [pkg, setPkg] = useState({ type: "", weight: "", dimensions: "", quantity: "", note: "" });
   const [pickupLongitude, setPickupLongitude] = useState("");
   const [pickupLatitude, setPickupLatitude] = useState("");
+  const [recipientLongitude, setRecipientLongitude] = useState("");
+  const [recipientLatitude, setRecipientLatitude] = useState("");
   const [geoLoading, setGeoLoading] = useState(false);
   const [estimatedCost, setEstimatedCost] = useState<number | null>(null);
   const [calculatorMessage, setCalculatorMessage] = useState("");
@@ -63,6 +65,21 @@ export default function CreateShipmentPage() {
       }
       if (Number.isNaN(lng) || Number.isNaN(lat) || lng < -180 || lng > 180 || lat < -90 || lat > 90) {
         setError("Enter valid pickup coordinates (longitude -180 to 180, latitude -90 to 90).");
+        return;
+      }
+    }
+
+    const recLonS = recipientLongitude.trim();
+    const recLatS = recipientLatitude.trim();
+    if ((recLonS && !recLatS) || (!recLonS && recLatS)) {
+      setError("Provide both drop-off longitude and latitude, or leave both empty.");
+      return;
+    }
+    if (recLonS && recLatS) {
+      const rl = parseFloat(recLonS);
+      const ra = parseFloat(recLatS);
+      if (Number.isNaN(rl) || Number.isNaN(ra) || rl < -180 || rl > 180 || ra < -90 || ra > 90) {
+        setError("Enter valid drop-off coordinates (longitude -180 to 180, latitude -90 to 90).");
         return;
       }
     }
@@ -120,6 +137,10 @@ export default function CreateShipmentPage() {
     if (deliveryType === "instant") {
       payload.pickupLongitude = parseFloat(pickupLongitude);
       payload.pickupLatitude = parseFloat(pickupLatitude);
+    }
+    if (recLonS && recLatS) {
+      payload.recipientLongitude = parseFloat(recLonS);
+      payload.recipientLatitude = parseFloat(recLatS);
     }
     const res = await createShipment(payload);
     setLoading(false);
@@ -243,6 +264,41 @@ export default function CreateShipmentPage() {
             <div>
               <label htmlFor="recipient-phone" className={labelClass}>Phone</label>
               <input id="recipient-phone" type="tel" required value={recipient.phone} onChange={(e) => setRecipient((r) => ({ ...r, phone: e.target.value }))} className={inputClass} placeholder="+1234567890" />
+            </div>
+            <div>
+              <p className="text-sm text-neutral-600 mb-2">
+                Drop-off coordinates (optional): used for maps and directions. Leave blank to geocode from the address above.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="recipient-lng" className={labelClass}>
+                    Drop-off longitude
+                  </label>
+                  <input
+                    id="recipient-lng"
+                    type="number"
+                    step="any"
+                    value={recipientLongitude}
+                    onChange={(e) => setRecipientLongitude(e.target.value)}
+                    className={inputClass}
+                    placeholder="Optional"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="recipient-lat" className={labelClass}>
+                    Drop-off latitude
+                  </label>
+                  <input
+                    id="recipient-lat"
+                    type="number"
+                    step="any"
+                    value={recipientLatitude}
+                    onChange={(e) => setRecipientLatitude(e.target.value)}
+                    className={inputClass}
+                    placeholder="Optional"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </section>
