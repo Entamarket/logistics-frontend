@@ -72,6 +72,11 @@ export async function updateMyRiderLocation(longitude: number, latitude: number)
   return apiPatch<RiderData>("/api/riders/me/location", { longitude, latitude });
 }
 
+/** Rider-only: set availability for new job matching (not account status). */
+export async function updateMyRiderAvailability(isAvailable: boolean) {
+  return apiPatch<RiderData>("/api/riders/me/availability", { isAvailable });
+}
+
 export function getRiderDisplayName(rider: RiderData): string {
   const user = typeof rider.userId === "object" && rider.userId ? rider.userId : null;
   if (user) return `${user.firstName} ${user.lastName}`.trim() || user.email;
