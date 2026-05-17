@@ -1,4 +1,4 @@
-import { apiPost } from "./api";
+import { apiGet, apiPatch, apiPost } from "./api";
 
 export interface AuthUser {
   id: string;
@@ -70,4 +70,31 @@ export async function logout() {
 
 export async function resendOTP(body: { email: string; purpose: string }) {
   return apiPost<unknown>("/api/auth/resend-otp", body);
+}
+
+export interface UserProfile {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  role: string;
+  status: string;
+  isEmailVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateProfileBody {
+  firstName: string;
+  lastName: string;
+  phone: string;
+}
+
+export async function getMyProfile() {
+  return apiGet<UserProfile>("/api/auth/me");
+}
+
+export async function updateMyProfile(body: UpdateProfileBody) {
+  return apiPatch<UserProfile>("/api/auth/me", body);
 }

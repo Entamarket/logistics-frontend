@@ -11,6 +11,7 @@ const clientNavItems = [
   { href: "/dashboard/notifications", label: "Notifications" },
   { href: "/dashboard/active", label: "Active shipment" },
   { href: "/dashboard/history", label: "Shipment history" },
+  { href: "/dashboard/complaints", label: "Complaints" },
   { href: "/dashboard/profile", label: "Profile setting" },
 ];
 

@@ -8,6 +8,7 @@ export interface NotificationRecord {
   message: string;
   read: boolean;
   relatedShipmentId: string | null;
+  relatedComplaintId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

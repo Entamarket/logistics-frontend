@@ -12,6 +12,7 @@ const riderNavItems = [
   { href: "/rider/history", label: "Delivery history" },
   { href: "/rider/address-book", label: "Address book" },
   { href: "/rider/notifications", label: "Notifications" },
+  { href: "/rider/complaints", label: "Complaints" },
   { href: "/rider/profile", label: "Profile & availability" },
 ];
 

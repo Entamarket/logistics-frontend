@@ -84,6 +84,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             if (msg.event === "unread_count" && typeof msg.count === "number") {
               setUnreadCount(msg.count);
             } else if (msg.event === "notification") {
+              setUnreadCount((c) => c + 1);
               void refreshUnread();
             } else if (
               msg.event === "rider_location" &&

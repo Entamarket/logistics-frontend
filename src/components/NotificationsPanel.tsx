@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   getNotifications,
   markNotificationRead,
@@ -23,6 +24,8 @@ function formatWhen(iso: string) {
 
 export function NotificationsPanel() {
   const router = useRouter();
+  const pathname = usePathname();
+  const isAdmin = pathname.startsWith("/admin");
   const notifCtx = useNotificationsOptional();
   const [items, setItems] = useState<NotificationRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +98,9 @@ export function NotificationsPanel() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#81007f]">Notifications</h1>
           <p className="mt-1 text-sm text-neutral-600">
-            Live updates when your shipments move. Unread items are highlighted.
+            {isAdmin
+              ? "Alerts for new complaints and platform activity. Unread items are highlighted."
+              : "Live updates when your shipments move. Unread items are highlighted."}
           </p>
         </div>
         {items.some((n) => !n.read) && (
@@ -141,6 +146,26 @@ export function NotificationsPanel() {
                   <p className="font-medium text-neutral-900">{n.title}</p>
                   <p className="text-neutral-600 mt-1">{n.message}</p>
                   <p className="text-xs text-neutral-500 mt-2">{formatWhen(n.createdAt)}</p>
+                  {isAdmin && n.relatedComplaintId && (
+                    <Link
+                      href={`/admin/complaints/${n.relatedComplaintId}`}
+                      className="inline-block mt-2 text-xs font-medium text-[#81007f] hover:underline"
+                    >
+                      View complaint →
+                    </Link>
+                  )}
+                  {!isAdmin && n.relatedShipmentId && (
+                    <Link
+                      href={
+                        pathname.startsWith("/rider")
+                          ? `/rider/active`
+                          : `/dashboard/active`
+                      }
+                      className="inline-block mt-2 text-xs font-medium text-[#81007f] hover:underline"
+                    >
+                      View shipment →
+                    </Link>
+                  )}
                 </div>
                 {!n.read && (
                   <button
