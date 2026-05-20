@@ -3,10 +3,30 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createShipment } from "@/lib/shipment-api";
+import {
+  ClientCostHighlight,
+  ClientPageHeader,
+  ClientSection,
+  ClientShell,
+  ClientToast,
+  clientBtnPrimary,
+  clientBtnSecondary,
+  clientInputClass,
+  clientInsetPanel,
+  clientLabelClass,
+} from "@/components/client/ClientUI";
 
-const inputClass =
-  "mt-1 block w-full min-h-[44px] rounded-lg border border-neutral-300 px-4 py-2.5 text-base text-neutral-900 placeholder-neutral-400 focus:border-[#81007f] focus:outline-none focus:ring-1 focus:ring-[#81007f]";
-const labelClass = "block text-sm font-medium text-neutral-700";
+function PackageIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+      />
+    </svg>
+  );
+}
 
 function toDateString(d: Date): string {
   const y = d.getFullYear();
@@ -211,187 +231,291 @@ export default function CreateShipmentPage() {
     return () => clearTimeout(t);
   }, [success, error]);
 
+  const deliveryOptionClass = (selected: boolean) =>
+    `flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition shadow-sm ${
+      selected
+        ? "border-[#81007f] bg-gradient-to-br from-[#faf8fb] to-fuchsia-50/40 shadow-[0_0_0_2px_rgba(129,0,127,0.12),0_0_24px_rgba(168,85,247,0.12)] ring-2 ring-[#81007f]/20"
+        : "border-neutral-200/90 bg-white hover:border-purple-200 hover:shadow-[0_0_16px_rgba(129,0,127,0.08)]"
+    }`;
+
   return (
-    <div className="max-w-2xl">
-      {(success || error) && (
-        <div className="fixed top-4 right-4 left-4 md:left-auto z-50 max-w-sm" role={error ? "alert" : "status"}>
-          {error && (
-            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 shadow-md">
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 shadow-md">
-              {success}
-            </div>
-          )}
-        </div>
-      )}
+    <ClientShell className="max-w-2xl">
+      <ClientToast error={error || undefined} success={success || undefined} />
 
-      <h1 className="text-xl sm:text-2xl font-bold text-[#81007f]">Create shipment</h1>
-      <p className="mt-1 text-sm text-neutral-600 mb-6">Enter sender, recipient, and package details.</p>
+      <ClientPageHeader
+        title="Create shipment"
+        description="Enter sender, recipient, and package details. We’ll match a rider once you submit."
+        icon={<PackageIcon className="h-6 w-6" />}
+      />
 
-      <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-[#81007f]">Sender details</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
-            <div>
-              <label htmlFor="sender-fullName" className={labelClass}>Full name</label>
-              <input id="sender-fullName" type="text" required value={sender.fullName} onChange={(e) => setSender((s) => ({ ...s, fullName: e.target.value }))} className={inputClass} placeholder="John Doe" />
-            </div>
-            <div>
-              <label htmlFor="sender-address" className={labelClass}>Address</label>
-              <input id="sender-address" type="text" required value={sender.address} onChange={(e) => setSender((s) => ({ ...s, address: e.target.value }))} className={inputClass} placeholder="Street, city, state" />
-            </div>
-            <div>
-              <label htmlFor="sender-phone" className={labelClass}>Phone</label>
-              <input id="sender-phone" type="tel" required value={sender.phone} onChange={(e) => setSender((s) => ({ ...s, phone: e.target.value }))} className={inputClass} placeholder="+1234567890" />
-            </div>
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-[#81007f]">Recipient details</h2>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <ClientSection title="Sender details" accent="purple">
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label htmlFor="recipient-fullName" className={labelClass}>Full name</label>
-              <input id="recipient-fullName" type="text" required value={recipient.fullName} onChange={(e) => setRecipient((r) => ({ ...r, fullName: e.target.value }))} className={inputClass} placeholder="Jane Doe" />
+              <label htmlFor="sender-fullName" className={clientLabelClass}>
+                Full name
+              </label>
+              <input
+                id="sender-fullName"
+                type="text"
+                required
+                value={sender.fullName}
+                onChange={(e) => setSender((s) => ({ ...s, fullName: e.target.value }))}
+                className={clientInputClass}
+                placeholder="John Doe"
+              />
             </div>
             <div>
-              <label htmlFor="recipient-address" className={labelClass}>Address</label>
-              <input id="recipient-address" type="text" required value={recipient.address} onChange={(e) => setRecipient((r) => ({ ...r, address: e.target.value }))} className={inputClass} placeholder="Street, city, state" />
+              <label htmlFor="sender-address" className={clientLabelClass}>
+                Address
+              </label>
+              <input
+                id="sender-address"
+                type="text"
+                required
+                value={sender.address}
+                onChange={(e) => setSender((s) => ({ ...s, address: e.target.value }))}
+                className={clientInputClass}
+                placeholder="Street, city, state"
+              />
             </div>
             <div>
-              <label htmlFor="recipient-phone" className={labelClass}>Phone</label>
-              <input id="recipient-phone" type="tel" required value={recipient.phone} onChange={(e) => setRecipient((r) => ({ ...r, phone: e.target.value }))} className={inputClass} placeholder="+1234567890" />
+              <label htmlFor="sender-phone" className={clientLabelClass}>
+                Phone
+              </label>
+              <input
+                id="sender-phone"
+                type="tel"
+                required
+                value={sender.phone}
+                onChange={(e) => setSender((s) => ({ ...s, phone: e.target.value }))}
+                className={clientInputClass}
+                placeholder="+1234567890"
+              />
+            </div>
+          </div>
+        </ClientSection>
+
+        <ClientSection
+          title="Recipient details"
+          description="Optional coordinates improve map accuracy; leave blank to geocode from the address."
+          accent="violet"
+        >
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label htmlFor="recipient-fullName" className={clientLabelClass}>
+                Full name
+              </label>
+              <input
+                id="recipient-fullName"
+                type="text"
+                required
+                value={recipient.fullName}
+                onChange={(e) => setRecipient((r) => ({ ...r, fullName: e.target.value }))}
+                className={clientInputClass}
+                placeholder="Jane Doe"
+              />
             </div>
             <div>
-              <p className="text-sm text-neutral-600 mb-2">
-                Drop-off coordinates (optional): used for maps and directions. Leave blank to geocode from the address above.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="recipient-lng" className={labelClass}>
-                    Drop-off longitude
-                  </label>
-                  <input
-                    id="recipient-lng"
-                    type="number"
-                    step="any"
-                    value={recipientLongitude}
-                    onChange={(e) => setRecipientLongitude(e.target.value)}
-                    className={inputClass}
-                    placeholder="Optional"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="recipient-lat" className={labelClass}>
-                    Drop-off latitude
-                  </label>
-                  <input
-                    id="recipient-lat"
-                    type="number"
-                    step="any"
-                    value={recipientLatitude}
-                    onChange={(e) => setRecipientLatitude(e.target.value)}
-                    className={inputClass}
-                    placeholder="Optional"
-                  />
-                </div>
+              <label htmlFor="recipient-address" className={clientLabelClass}>
+                Address
+              </label>
+              <input
+                id="recipient-address"
+                type="text"
+                required
+                value={recipient.address}
+                onChange={(e) => setRecipient((r) => ({ ...r, address: e.target.value }))}
+                className={clientInputClass}
+                placeholder="Street, city, state"
+              />
+            </div>
+            <div>
+              <label htmlFor="recipient-phone" className={clientLabelClass}>
+                Phone
+              </label>
+              <input
+                id="recipient-phone"
+                type="tel"
+                required
+                value={recipient.phone}
+                onChange={(e) => setRecipient((r) => ({ ...r, phone: e.target.value }))}
+                className={clientInputClass}
+                placeholder="+1234567890"
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="recipient-lng" className={clientLabelClass}>
+                  Drop-off longitude <span className="font-normal text-neutral-500">(optional)</span>
+                </label>
+                <input
+                  id="recipient-lng"
+                  type="number"
+                  step="any"
+                  value={recipientLongitude}
+                  onChange={(e) => setRecipientLongitude(e.target.value)}
+                  className={clientInputClass}
+                  placeholder="Optional"
+                />
+              </div>
+              <div>
+                <label htmlFor="recipient-lat" className={clientLabelClass}>
+                  Drop-off latitude <span className="font-normal text-neutral-500">(optional)</span>
+                </label>
+                <input
+                  id="recipient-lat"
+                  type="number"
+                  step="any"
+                  value={recipientLatitude}
+                  onChange={(e) => setRecipientLatitude(e.target.value)}
+                  className={clientInputClass}
+                  placeholder="Optional"
+                />
               </div>
             </div>
           </div>
-        </section>
+        </ClientSection>
 
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-[#81007f]">Package details</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <ClientSection title="Package details" accent="purple">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="pkg-type" className={labelClass}>Type</label>
-              <input id="pkg-type" type="text" required value={pkg.type} onChange={(e) => setPkg((p) => ({ ...p, type: e.target.value }))} className={inputClass} placeholder="e.g. Box, Envelope" />
+              <label htmlFor="pkg-type" className={clientLabelClass}>
+                Type
+              </label>
+              <input
+                id="pkg-type"
+                type="text"
+                required
+                value={pkg.type}
+                onChange={(e) => setPkg((p) => ({ ...p, type: e.target.value }))}
+                className={clientInputClass}
+                placeholder="e.g. Box, Envelope"
+              />
             </div>
             <div>
-              <label htmlFor="pkg-weight" className={labelClass}>Weight (kg)</label>
-              <input id="pkg-weight" type="number" step="0.01" min="0" required value={pkg.weight} onChange={(e) => setPkg((p) => ({ ...p, weight: e.target.value }))} className={inputClass} placeholder="0" />
+              <label htmlFor="pkg-weight" className={clientLabelClass}>
+                Weight (kg)
+              </label>
+              <input
+                id="pkg-weight"
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                value={pkg.weight}
+                onChange={(e) => setPkg((p) => ({ ...p, weight: e.target.value }))}
+                className={clientInputClass}
+                placeholder="0"
+              />
             </div>
             <div>
-              <label htmlFor="pkg-dimensions" className={labelClass}>Dimensions</label>
-              <input id="pkg-dimensions" type="number" step="0.01" min="0" required value={pkg.dimensions} onChange={(e) => setPkg((p) => ({ ...p, dimensions: e.target.value }))} className={inputClass} placeholder="0" />
+              <label htmlFor="pkg-dimensions" className={clientLabelClass}>
+                Dimensions
+              </label>
+              <input
+                id="pkg-dimensions"
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                value={pkg.dimensions}
+                onChange={(e) => setPkg((p) => ({ ...p, dimensions: e.target.value }))}
+                className={clientInputClass}
+                placeholder="0"
+              />
             </div>
             <div>
-              <label htmlFor="pkg-quantity" className={labelClass}>Quantity</label>
-              <input id="pkg-quantity" type="number" min="1" required value={pkg.quantity} onChange={(e) => setPkg((p) => ({ ...p, quantity: e.target.value }))} className={inputClass} placeholder="1" />
+              <label htmlFor="pkg-quantity" className={clientLabelClass}>
+                Quantity
+              </label>
+              <input
+                id="pkg-quantity"
+                type="number"
+                min="1"
+                required
+                value={pkg.quantity}
+                onChange={(e) => setPkg((p) => ({ ...p, quantity: e.target.value }))}
+                className={clientInputClass}
+                placeholder="1"
+              />
             </div>
           </div>
           <div>
-            <label htmlFor="pkg-note" className={labelClass}>Note (optional)</label>
-            <textarea id="pkg-note" rows={3} value={pkg.note} onChange={(e) => setPkg((p) => ({ ...p, note: e.target.value }))} className={inputClass + " min-h-[80px]"} placeholder="Special instructions" />
+            <label htmlFor="pkg-note" className={clientLabelClass}>
+              Note (optional)
+            </label>
+            <textarea
+              id="pkg-note"
+              rows={3}
+              value={pkg.note}
+              onChange={(e) => setPkg((p) => ({ ...p, note: e.target.value }))}
+              className={`${clientInputClass} min-h-[88px]`}
+              placeholder="Special instructions"
+            />
           </div>
-        </section>
+        </ClientSection>
 
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-[#81007f]">Price calculator</h2>
-          <p className="text-sm text-neutral-600">
-            Cost is ₦500 per kg (rounded to the nearest whole number). Enter weight in Package details above, then click Calculate cost.
-          </p>
-          <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
-            <button
-              type="button"
-              onClick={handleCalculateCost}
-              className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-lg border-2 border-[#81007f] bg-white font-medium text-[#81007f] transition hover:bg-[#81007f] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#81007f] focus:ring-offset-2"
-            >
+        <ClientSection
+          title="Price calculator"
+          description="₦500 per kg, rounded to the nearest whole number. Enter weight above, then calculate."
+          accent="amber"
+        >
+          <div className="flex flex-col flex-wrap gap-3 sm:flex-row sm:items-center">
+            <button type="button" onClick={handleCalculateCost} className={clientBtnSecondary}>
               Calculate cost
             </button>
-            {calculatorMessage && (
-              <p className="text-sm text-amber-700 mt-1 sm:mt-0" role="status">
+            {calculatorMessage ? (
+              <p className="text-sm text-amber-800" role="status">
                 {calculatorMessage}
               </p>
-            )}
-            {estimatedCost !== null && (
-              <p className="text-base font-semibold text-neutral-900 mt-1 sm:mt-0" role="status">
-                Estimated cost: ₦{estimatedCost.toLocaleString()}
-              </p>
-            )}
+            ) : null}
+            {estimatedCost !== null ? <ClientCostHighlight amount={estimatedCost} /> : null}
           </div>
-        </section>
+        </ClientSection>
 
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-[#81007f]">Delivery</h2>
+        <ClientSection title="Delivery" accent="purple">
           <fieldset className="space-y-3">
-            <legend className={labelClass}>Delivery type</legend>
-            <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
+            <legend className={clientLabelClass}>Delivery type</legend>
+            <div className="grid gap-3 sm:grid-cols-1">
+              <label className={deliveryOptionClass(deliveryType === "instant")}>
                 <input
                   type="radio"
                   name="deliveryType"
                   value="instant"
                   checked={deliveryType === "instant"}
                   onChange={() => setDeliveryType("instant")}
-                  className="h-4 w-4 border-neutral-300 text-[#81007f] focus:ring-[#81007f]"
+                  className="mt-1 h-4 w-4 border-neutral-300 text-[#81007f] focus:ring-[#81007f]"
                 />
-                <span className="text-neutral-900">Instant – pickup as soon as possible</span>
+                <span>
+                  <span className="block font-semibold text-neutral-900">Instant</span>
+                  <span className="text-sm text-neutral-600">Pickup as soon as possible</span>
+                </span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className={deliveryOptionClass(deliveryType === "scheduled")}>
                 <input
                   type="radio"
                   name="deliveryType"
                   value="scheduled"
                   checked={deliveryType === "scheduled"}
                   onChange={() => setDeliveryType("scheduled")}
-                  className="h-4 w-4 border-neutral-300 text-[#81007f] focus:ring-[#81007f]"
+                  className="mt-1 h-4 w-4 border-neutral-300 text-[#81007f] focus:ring-[#81007f]"
                 />
-                <span className="text-neutral-900">Scheduled – choose date and time window</span>
+                <span>
+                  <span className="block font-semibold text-neutral-900">Scheduled</span>
+                  <span className="text-sm text-neutral-600">Choose date and 2-hour pickup window</span>
+                </span>
               </label>
             </div>
           </fieldset>
           {deliveryType === "instant" && (
-            <div className="space-y-4 pt-2 rounded-lg border border-neutral-200 bg-neutral-50/80 p-4">
+            <div className={`${clientInsetPanel} mt-2 space-y-4`}>
               <p className="text-sm text-neutral-600">
-                Pickup coordinates (WGS84) are used to assign the nearest available rider. Example for Lagos: latitude 6.52, longitude 3.38.
+                Pickup coordinates (WGS84) assign the nearest rider. Example for Lagos: latitude 6.52, longitude 3.38.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="pickup-lng" className={labelClass}>
+                  <label htmlFor="pickup-lng" className={clientLabelClass}>
                     Pickup longitude
                   </label>
                   <input
@@ -401,12 +525,12 @@ export default function CreateShipmentPage() {
                     required={deliveryType === "instant"}
                     value={pickupLongitude}
                     onChange={(e) => setPickupLongitude(e.target.value)}
-                    className={inputClass}
+                    className={clientInputClass}
                     placeholder="3.3792"
                   />
                 </div>
                 <div>
-                  <label htmlFor="pickup-lat" className={labelClass}>
+                  <label htmlFor="pickup-lat" className={clientLabelClass}>
                     Pickup latitude
                   </label>
                   <input
@@ -416,7 +540,7 @@ export default function CreateShipmentPage() {
                     required={deliveryType === "instant"}
                     value={pickupLatitude}
                     onChange={(e) => setPickupLatitude(e.target.value)}
-                    className={inputClass}
+                    className={clientInputClass}
                     placeholder="6.5244"
                   />
                 </div>
@@ -425,16 +549,18 @@ export default function CreateShipmentPage() {
                 type="button"
                 onClick={handleUsePickupLocation}
                 disabled={geoLoading}
-                className="text-sm font-medium text-[#81007f] hover:underline disabled:opacity-60"
+                className="text-sm font-semibold text-[#81007f] hover:underline disabled:opacity-60"
               >
                 {geoLoading ? "Getting location…" : "Use my current location"}
               </button>
             </div>
           )}
           {deliveryType === "scheduled" && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <div className={`${clientInsetPanel} mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2`}>
               <div>
-                <label htmlFor="pickup-date" className={labelClass}>Pickup date</label>
+                <label htmlFor="pickup-date" className={clientLabelClass}>
+                  Pickup date
+                </label>
                 <input
                   id="pickup-date"
                   type="date"
@@ -443,33 +569,31 @@ export default function CreateShipmentPage() {
                   max={getMaxPickupDate()}
                   value={pickupDate}
                   onChange={(e) => setPickupDate(e.target.value)}
-                  className={inputClass}
+                  className={clientInputClass}
                 />
               </div>
               <div>
-                <label htmlFor="pickup-window-start" className={labelClass}>Pickup window start</label>
+                <label htmlFor="pickup-window-start" className={clientLabelClass}>
+                  Pickup window start
+                </label>
                 <input
                   id="pickup-window-start"
                   type="time"
                   required={deliveryType === "scheduled"}
                   value={pickupWindowStart}
                   onChange={(e) => setPickupWindowStart(e.target.value)}
-                  className={inputClass}
+                  className={clientInputClass}
                 />
                 <p className="mt-1 text-xs text-neutral-500">Pickup window is 2 hours starting at this time.</p>
               </div>
             </div>
           )}
-        </section>
+        </ClientSection>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full min-h-[44px] rounded-lg bg-[#81007f] px-4 py-3 font-medium text-white transition hover:bg-[#6a0068] active:bg-[#5a0058] focus:outline-none focus:ring-2 focus:ring-[#81007f] focus:ring-offset-2 disabled:opacity-60"
-        >
+        <button type="submit" disabled={loading} className={`${clientBtnPrimary} w-full`}>
           {loading ? "Creating…" : "Create shipment"}
         </button>
       </form>
-    </div>
+    </ClientShell>
   );
 }

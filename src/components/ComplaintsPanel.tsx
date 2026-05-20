@@ -3,22 +3,70 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  createComplaint,
-  getMyComplaints,
-  complaintStatusClass,
-  type ComplaintData,
-} from "@/lib/complaints-api";
+import { createComplaint, getMyComplaints, type ComplaintData } from "@/lib/complaints-api";
 import { formatAdminDate, shortShipmentId } from "@/lib/admin-api";
+import {
+  ClientEmptyState,
+  ClientErrorAlert,
+  ClientLoadingBlock,
+  ClientPageHeader,
+  ClientSection,
+  ClientShell,
+  ClientSuccessAlert,
+  clientBtnPrimary,
+  clientCard,
+  clientComplaintStatus,
+  clientInputClass,
+  clientLabelClass,
+} from "@/components/client/ClientUI";
+import {
+  RiderEmptyState,
+  RiderErrorAlert,
+  RiderLoadingBlock,
+  RiderPageHeader,
+  RiderShell,
+  RiderSuccessAlert,
+  riderBtnPrimary,
+  riderCard,
+  riderCardAccentAmber,
+  riderInputClass,
+  riderLabelClass,
+} from "@/components/rider/RiderUI";
 
-const inputClass =
-  "mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 text-sm text-neutral-900 placeholder:text-neutral-500 focus:border-[#81007f] focus:outline-none focus:ring-1 focus:ring-[#81007f]";
+function riderComplaintStatus(status: string): string {
+  const base = "inline-flex rounded-full px-2.5 py-1 text-xs font-bold capitalize";
+  switch (status) {
+    case "open":
+      return `${base} bg-amber-100 text-amber-900 ring-1 ring-amber-200 shadow-[0_0_12px_rgba(245,158,11,0.25)]`;
+    case "in_review":
+      return `${base} bg-purple-100 text-[#6a0068] ring-1 ring-purple-200 shadow-[0_0_14px_rgba(129,0,127,0.28)]`;
+    case "resolved":
+      return `${base} bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.25)]`;
+    default:
+      return `${base} bg-slate-100 text-slate-700 ring-1 ring-slate-200`;
+  }
+}
+
+function ComplaintIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+      />
+    </svg>
+  );
+}
 
 interface ComplaintsPanelProps {
   shipmentLinkPrefix: string;
+  variant?: "client" | "rider";
 }
 
-export function ComplaintsPanel({ shipmentLinkPrefix }: ComplaintsPanelProps) {
+export function ComplaintsPanel({ shipmentLinkPrefix, variant = "client" }: ComplaintsPanelProps) {
+  const isRider = variant === "rider";
+  const isClient = !isRider;
   const router = useRouter();
   const [complaints, setComplaints] = useState<ComplaintData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +77,9 @@ export function ComplaintsPanel({ shipmentLinkPrefix }: ComplaintsPanelProps) {
   const [message, setMessage] = useState("");
   const [phone, setPhone] = useState("");
   const [relatedShipmentId, setRelatedShipmentId] = useState("");
+
+  const inputClass = isRider ? riderInputClass : clientInputClass;
+  const labelClass = isRider ? riderLabelClass : clientLabelClass;
 
   const load = useCallback(async () => {
     setError("");
@@ -76,20 +127,11 @@ export function ComplaintsPanel({ shipmentLinkPrefix }: ComplaintsPanelProps) {
     setError(res.message || "Failed to submit complaint");
   }
 
-  return (
-    <div className="max-w-2xl space-y-8">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-[#81007f]">Complaints</h1>
-        <p className="mt-2 text-sm text-neutral-600">
-          Report an issue with a delivery or your experience. We typically respond within 1–2 business days.
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-neutral-200 bg-white p-4 sm:p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-neutral-900">Submit a complaint</h2>
+  const formFields = (
+    <>
 
         <label className="block">
-          <span className="text-sm font-medium text-neutral-900">Subject</span>
+          <span className={labelClass}>Subject</span>
           <input
             type="text"
             value={subject}
@@ -102,7 +144,7 @@ export function ComplaintsPanel({ shipmentLinkPrefix }: ComplaintsPanelProps) {
         </label>
 
         <label className="block">
-          <span className="text-sm font-medium text-neutral-900">Phone number</span>
+          <span className={labelClass}>Phone number</span>
           <input
             type="tel"
             value={phone}
@@ -115,7 +157,7 @@ export function ComplaintsPanel({ shipmentLinkPrefix }: ComplaintsPanelProps) {
         </label>
 
         <label className="block">
-          <span className="text-sm font-medium text-neutral-900">Details</span>
+          <span className={labelClass}>Details</span>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -129,8 +171,8 @@ export function ComplaintsPanel({ shipmentLinkPrefix }: ComplaintsPanelProps) {
         </label>
 
         <label className="block">
-          <span className="text-sm font-medium text-neutral-900">
-            Related shipment ID <span className="text-neutral-600 font-normal">(optional)</span>
+          <span className={labelClass}>
+            Related shipment ID <span className="font-normal text-slate-500">(optional)</span>
           </span>
           <input
             type="text"
@@ -141,61 +183,132 @@ export function ComplaintsPanel({ shipmentLinkPrefix }: ComplaintsPanelProps) {
           />
         </label>
 
-        {error && (
-          <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700" role="alert">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800" role="status">
-            {success}
-          </div>
-        )}
+      {error &&
+        (isRider ? <RiderErrorAlert>{error}</RiderErrorAlert> : <ClientErrorAlert>{error}</ClientErrorAlert>)}
+      {success &&
+        (isRider ? (
+          <RiderSuccessAlert>{success}</RiderSuccessAlert>
+        ) : (
+          <ClientSuccessAlert>{success}</ClientSuccessAlert>
+        ))}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="inline-flex justify-center items-center min-h-[44px] w-full sm:w-auto px-6 rounded-lg bg-[#81007f] text-white font-medium hover:bg-[#6a0068] focus:outline-none focus:ring-2 focus:ring-[#81007f] focus:ring-offset-2 disabled:opacity-60"
-        >
-          {submitting ? "Submitting…" : "Submit complaint"}
-        </button>
-      </form>
+      <button
+        type="submit"
+        disabled={submitting}
+        className={`${isRider ? riderBtnPrimary : clientBtnPrimary} w-full sm:w-auto`}
+      >
+        {submitting ? "Submitting…" : "Submit complaint"}
+      </button>
+    </>
+  );
 
-      <section className="space-y-3">
-        <h2 className="text-base font-semibold text-neutral-900">Your complaints</h2>
-        {loading && <p className="text-sm text-neutral-500">Loading…</p>}
-        {!loading && complaints.length === 0 && (
-          <p className="text-sm text-neutral-500">You have not submitted any complaints yet.</p>
-        )}
-        {!loading && complaints.length > 0 && (
-          <ul className="space-y-3">
-            {complaints.map((c) => (
-              <li key={c.id} className="rounded-lg border border-neutral-200 bg-white p-4">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-neutral-900">{c.subject}</h3>
-                  <span className={complaintStatusClass(c.status)}>{c.status.replace(/_/g, " ")}</span>
-                </div>
-                <p className="mt-2 text-sm text-neutral-700 whitespace-pre-wrap">{c.message}</p>
-                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
-                  {c.phone && <span>Phone: {c.phone}</span>}
-                  <span>Submitted {formatAdminDate(c.createdAt)}</span>
-                  {c.relatedShipmentId && shipmentLinkPrefix && (
-                    <Link
-                      href={`${shipmentLinkPrefix}/${c.relatedShipmentId}`}
-                      className="text-[#81007f] font-medium hover:underline"
-                    >
-                      Shipment #{shortShipmentId(c.relatedShipmentId)}
-                    </Link>
-                  )}
-                  {c.relatedShipmentId && !shipmentLinkPrefix && (
-                    <span className="font-mono">#{shortShipmentId(c.relatedShipmentId)}</span>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+  const formSection = isClient ? (
+    <form onSubmit={handleSubmit}>
+      <ClientSection
+        title="Submit a complaint"
+        description="Tell us what went wrong. Include a shipment ID if the issue relates to a specific delivery."
+        accent="amber"
+      >
+        <div className="space-y-4">{formFields}</div>
+      </ClientSection>
+    </form>
+  ) : (
+    <form onSubmit={handleSubmit} className={`${riderCard} space-y-4 p-5`}>
+      <div className={riderCardAccentAmber} aria-hidden />
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold text-amber-900">Submit a complaint</h2>
+        {formFields}
+      </div>
+    </form>
+  );
+
+  const listSection = (
+    <section className="space-y-3">
+      <h2 className={isRider ? "text-lg font-bold text-[#6a0068]" : "text-lg font-bold text-[#81007f]"}>
+        Your complaints
+      </h2>
+      {loading &&
+        (isRider ? (
+          <RiderLoadingBlock label="Loading complaints…" />
+        ) : (
+          <ClientLoadingBlock label="Loading complaints…" />
+        ))}
+      {!loading &&
+        complaints.length === 0 &&
+        (isRider ? (
+          <RiderEmptyState
+            icon={<ComplaintIcon className="h-7 w-7" />}
+            title="No complaints yet"
+            description="Use the form above if you need to report an issue with a delivery."
+          />
+        ) : (
+          <ClientEmptyState
+            icon={<ComplaintIcon className="h-7 w-7" />}
+            title="No complaints yet"
+            description="Use the form above if you need to report an issue with a delivery."
+          />
+        ))}
+      {!loading && complaints.length > 0 && (
+        <ul className="space-y-3">
+          {complaints.map((c) => (
+            <li key={c.id} className={isRider ? `${riderCard} p-5` : `${clientCard} p-5`}>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <h3 className={`text-sm font-semibold ${isRider ? "text-slate-900" : "text-neutral-900"}`}>
+                  {c.subject}
+                </h3>
+                <span className={isRider ? riderComplaintStatus(c.status) : clientComplaintStatus(c.status)}>
+                  {c.status.replace(/_/g, " ")}
+                </span>
+              </div>
+              <p className={`mt-2 text-sm whitespace-pre-wrap ${isRider ? "text-slate-700" : "text-neutral-700"}`}>
+                {c.message}
+              </p>
+              <div className={`mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs ${isRider ? "text-slate-500" : "text-neutral-500"}`}>
+                {c.phone && <span>Phone: {c.phone}</span>}
+                <span>Submitted {formatAdminDate(c.createdAt)}</span>
+                {c.relatedShipmentId && shipmentLinkPrefix && (
+                  <Link
+                    href={`${shipmentLinkPrefix}/${c.relatedShipmentId}`}
+                    className="font-semibold text-[#81007f] hover:underline"
+                  >
+                    Shipment #{shortShipmentId(c.relatedShipmentId)}
+                  </Link>
+                )}
+                {c.relatedShipmentId && !shipmentLinkPrefix && (
+                  <span className="font-mono">#{shortShipmentId(c.relatedShipmentId)}</span>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+
+  const inner = (
+    <div className="max-w-2xl space-y-8">
+      {isRider ? (
+        <RiderPageHeader
+          badge="Support"
+          title="Complaints"
+          description="Report an issue with a delivery or your experience. We typically respond within 1–2 business days."
+          icon={<ComplaintIcon className="h-6 w-6" />}
+        />
+      ) : (
+        <ClientPageHeader
+          title="Complaints"
+          description="Report an issue with a delivery or your experience. We typically respond within 1–2 business days."
+          icon={<ComplaintIcon className="h-6 w-6" />}
+        />
+      )}
+      {formSection}
+      {listSection}
     </div>
   );
+
+  if (isRider) {
+    return <RiderShell>{inner}</RiderShell>;
+  }
+
+  return <ClientShell>{inner}</ClientShell>;
 }

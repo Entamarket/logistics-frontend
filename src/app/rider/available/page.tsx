@@ -1,11 +1,39 @@
+"use client";
+
+import {
+  RiderEmptyState,
+  RiderPageHeader,
+  RiderShell,
+} from "@/components/rider/RiderUI";
+
+function PackageIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+      />
+    </svg>
+  );
+}
+
 export default function RiderAvailableDeliveriesPage() {
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-xl sm:text-2xl font-bold text-[#81007f]">Available deliveries</h1>
-      <p className="mt-2 text-sm sm:text-base text-neutral-600">
-        Shipments waiting for a rider will appear here. You will be able to see pickup and drop-off areas, package summary, and accept a job from this list.
-      </p>
-      <p className="mt-4 text-sm text-neutral-500">No open jobs to show yet.</p>
-    </div>
+    <RiderShell className="max-w-2xl">
+      <div className="space-y-6">
+        <RiderPageHeader
+          badge="Job board"
+          title="Available deliveries"
+          description="Shipments waiting for a rider appear here with pickup and drop-off summaries. Accept a job when you're ready to roll."
+          icon={<PackageIcon className="h-6 w-6" />}
+        />
+        <RiderEmptyState
+          icon={<PackageIcon className="h-7 w-7" />}
+          title="No open jobs right now"
+          description="Check back soon or turn on availability in Profile when you're on duty."
+        />
+      </div>
+    </RiderShell>
   );
 }

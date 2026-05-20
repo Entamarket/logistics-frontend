@@ -3,5 +3,5 @@
 import { ComplaintsPanel } from "@/components/ComplaintsPanel";
 
 export default function ClientComplaintsPage() {
-  return <ComplaintsPanel shipmentLinkPrefix="" />;
+  return <ComplaintsPanel shipmentLinkPrefix="" variant="client" />;
 }

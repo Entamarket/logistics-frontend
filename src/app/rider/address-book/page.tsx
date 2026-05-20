@@ -3,9 +3,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getRiderAddressBook, type RiderAddressBookEntry } from "@/lib/shipment-api";
-
-const searchInputClass =
-  "w-full rounded-xl border border-purple-200/70 bg-white px-4 py-2.5 text-sm text-neutral-900 shadow-sm placeholder:text-neutral-500 transition focus:border-[#81007f] focus:outline-none focus:ring-2 focus:ring-[#81007f]/30 focus:shadow-[0_0_0_3px_rgba(129,0,127,0.12),0_0_24px_rgba(168,85,247,0.15)]";
+import {
+  RiderEmptyState,
+  RiderErrorAlert,
+  RiderLoadingBlock,
+  RiderPageHeader,
+  RiderShell,
+  riderCard,
+  riderCardAccentAmber,
+  riderCardAccentPurple,
+  riderInputClass,
+  riderNeonBoxAmber,
+  riderNeonBoxPurple,
+} from "@/components/rider/RiderUI";
 
 function formatSeen(iso: string) {
   try {
@@ -32,36 +42,17 @@ function contactInitial(name: string): string {
   return trimmed ? trimmed.charAt(0).toUpperCase() : "?";
 }
 
-function roleBadgeClass(role: RiderAddressBookEntry["role"]): string {
-  const base =
-    "inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full shadow-sm";
-  if (role === "sender") {
-    return `${base} bg-violet-100 text-violet-800 ring-1 ring-violet-300/80 shadow-[0_0_12px_rgba(139,92,246,0.4)]`;
-  }
-  return `${base} bg-emerald-100 text-emerald-800 ring-1 ring-emerald-300/80 shadow-[0_0_12px_rgba(16,185,129,0.4)]`;
-}
-
-function addressCardClass(role: RiderAddressBookEntry["role"]): string {
-  const base =
-    "relative overflow-hidden rounded-2xl border backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.01]";
-  if (role === "sender") {
-    return `${base} border-violet-200/80 bg-gradient-to-br from-white via-violet-50/35 to-fuchsia-50/20 shadow-[0_0_0_1px_rgba(139,92,246,0.2),0_8px_32px_rgba(139,92,246,0.16),0_0_48px_rgba(217,70,239,0.1)] hover:shadow-[0_0_0_1px_rgba(139,92,246,0.35),0_12px_40px_rgba(139,92,246,0.26),0_0_64px_rgba(217,70,239,0.18)]`;
-  }
-  return `${base} border-emerald-200/80 bg-gradient-to-br from-white via-emerald-50/30 to-cyan-50/20 shadow-[0_0_0_1px_rgba(16,185,129,0.2),0_8px_32px_rgba(16,185,129,0.16),0_0_48px_rgba(34,211,238,0.1)] hover:shadow-[0_0_0_1px_rgba(16,185,129,0.35),0_12px_40px_rgba(16,185,129,0.26),0_0_64px_rgba(34,211,238,0.18)]`;
-}
-
-function accentBarClass(role: RiderAddressBookEntry["role"]): string {
-  if (role === "sender") {
-    return "h-0.5 w-full bg-gradient-to-r from-transparent via-violet-400 to-fuchsia-400 shadow-[0_0_12px_rgba(139,92,246,0.8)]";
-  }
-  return "h-0.5 w-full bg-gradient-to-r from-transparent via-emerald-400 to-cyan-400 shadow-[0_0_12px_rgba(16,185,129,0.8)]";
+function roleBadge(role: RiderAddressBookEntry["role"]): string {
+  const base = "inline-flex rounded-full px-3 py-1 text-xs font-bold";
+  return role === "sender"
+    ? `${base} bg-amber-100 text-amber-900 ring-1 ring-amber-200 shadow-[0_0_12px_rgba(245,158,11,0.22)]`
+    : `${base} bg-purple-100 text-[#6a0068] ring-1 ring-purple-200 shadow-[0_0_12px_rgba(129,0,127,0.22)]`;
 }
 
 function avatarClass(role: RiderAddressBookEntry["role"]): string {
-  if (role === "sender") {
-    return "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-500 text-base font-bold text-white shadow-[0_4px_16px_rgba(139,92,246,0.4)]";
-  }
-  return "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-600 to-cyan-500 text-base font-bold text-white shadow-[0_4px_16px_rgba(16,185,129,0.4)]";
+  return role === "sender"
+    ? "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-base font-bold text-white ring-1 ring-white/30 shadow-[0_0_20px_rgba(245,158,11,0.4),0_4px_14px_rgba(234,88,12,0.25)]"
+    : "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#6a0068] to-[#81007f] text-base font-bold text-white ring-1 ring-white/25 shadow-[0_4px_16px_rgba(129,0,127,0.45),0_0_28px_rgba(217,70,239,0.35)]";
 }
 
 function roleLabel(role: RiderAddressBookEntry["role"]): string {
@@ -146,142 +137,97 @@ export default function RiderAddressBookPage() {
   }, [load]);
 
   const filtered = useMemo(() => entries.filter((e) => matchesQuery(e, search)), [entries, search]);
-
   const senderCount = useMemo(() => filtered.filter((e) => e.role === "sender").length, [filtered]);
   const receiverCount = useMemo(() => filtered.filter((e) => e.role === "recipient").length, [filtered]);
-
   const hasQuery = search.trim().length > 0;
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <div className="relative overflow-hidden rounded-2xl border border-purple-200/60 bg-gradient-to-br from-[#81007f]/10 via-white to-fuchsia-50/50 px-5 py-5 shadow-[0_0_0_1px_rgba(129,0,127,0.15),0_8px_32px_rgba(129,0,127,0.12),0_0_56px_rgba(168,85,247,0.15)]">
-        <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-fuchsia-400/20 blur-3xl" aria-hidden />
-        <div className="relative flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#81007f] text-white shadow-[0_4px_20px_rgba(129,0,127,0.4),0_0_28px_rgba(168,85,247,0.35)]">
-            <BookIcon className="h-6 w-6" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#81007f] drop-shadow-[0_0_12px_rgba(129,0,127,0.25)]">
-              Address book
-            </h1>
-            <p className="mt-1 text-sm text-neutral-600">
-              Sender and receiver contacts from your deliveries, ready to reuse.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="relative">
-        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#81007f]/60" />
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search name, address, phone, or role…"
-          className={`${searchInputClass} pl-10`}
-          aria-label="Search address book"
+    <RiderShell className="max-w-2xl">
+      <div className="space-y-6">
+        <RiderPageHeader
+          badge="Contacts"
+          title="Address book"
+          description="Sender and receiver contacts from your deliveries, ready to reuse."
+          icon={<BookIcon className="h-6 w-6" />}
         />
-      </div>
 
-      {!loading && filtered.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          <span className="inline-flex items-center rounded-full bg-violet-100/90 px-3 py-1 text-xs font-semibold text-violet-800 ring-1 ring-violet-300/70 shadow-[0_0_12px_rgba(139,92,246,0.25)]">
-            {senderCount} sender{senderCount === 1 ? "" : "s"}
-          </span>
-          <span className="inline-flex items-center rounded-full bg-emerald-100/90 px-3 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-300/70 shadow-[0_0_12px_rgba(16,185,129,0.25)]">
-            {receiverCount} receiver{receiverCount === 1 ? "" : "s"}
-          </span>
+        <div className="relative">
+          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#81007f]/70" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, address, phone, or role…"
+            className={`${riderInputClass} mt-0 pl-10`}
+            aria-label="Search address book"
+          />
         </div>
-      )}
 
-      {loading && (
-        <div className="space-y-4" aria-busy="true" aria-label="Loading address book">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-44 animate-pulse rounded-2xl border border-purple-200/60 bg-gradient-to-r from-purple-100/70 via-fuchsia-50/50 to-purple-100/70 shadow-[0_0_24px_rgba(168,85,247,0.12),0_8px_32px_rgba(129,0,127,0.08)]"
-            />
-          ))}
-        </div>
-      )}
-
-      {!loading && error && (
-        <div
-          className="rounded-xl border border-red-200/80 bg-red-50/90 px-4 py-3 text-sm text-red-700 shadow-[0_0_0_1px_rgba(239,68,68,0.25),0_4px_24px_rgba(239,68,68,0.2),0_0_32px_rgba(239,68,68,0.15)]"
-          role="alert"
-        >
-          {error}
-        </div>
-      )}
-
-      {!loading && !error && entries.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-purple-300/80 bg-gradient-to-br from-purple-50/70 via-white to-fuchsia-50/50 px-6 py-12 text-center shadow-[inset_0_0_32px_rgba(168,85,247,0.08),0_0_48px_rgba(129,0,127,0.1)]">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-[0_4px_24px_rgba(129,0,127,0.2),0_0_32px_rgba(168,85,247,0.25)]">
-            <BookIcon className="h-7 w-7 text-[#81007f]/70" />
+        {!loading && filtered.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <span className="inline-flex rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-800 ring-1 ring-violet-200">
+              {senderCount} sender{senderCount === 1 ? "" : "s"}
+            </span>
+            <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200">
+              {receiverCount} receiver{receiverCount === 1 ? "" : "s"}
+            </span>
           </div>
-          <p className="mt-4 text-sm font-medium text-neutral-800">No contacts yet</p>
-          <p className="mt-1 text-sm text-neutral-500">
-            Pick up or complete deliveries to build your address book.
-          </p>
-        </div>
-      )}
+        )}
 
-      {!loading && !error && entries.length > 0 && filtered.length === 0 && hasQuery && (
-        <div className="rounded-2xl border border-dashed border-purple-300/80 bg-gradient-to-br from-purple-50/70 via-white to-fuchsia-50/50 px-6 py-12 text-center shadow-[inset_0_0_32px_rgba(168,85,247,0.08),0_0_48px_rgba(129,0,127,0.1)]">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-[0_4px_24px_rgba(129,0,127,0.2),0_0_32px_rgba(168,85,247,0.25)]">
-            <SearchIcon className="h-7 w-7 text-[#81007f]/70" />
-          </div>
-          <p className="mt-4 text-sm font-medium text-neutral-800">No matches</p>
-          <p className="mt-1 text-sm text-neutral-500">
-            Try a different name, address, phone number, or role.
-          </p>
-        </div>
-      )}
+        {loading && <RiderLoadingBlock label="Loading address book…" />}
+        {!loading && error && <RiderErrorAlert>{error}</RiderErrorAlert>}
 
-      {!loading && !error && filtered.length > 0 && (
-        <ul className="space-y-5">
-          {filtered.map((e) => (
-            <li key={`${e.role}-${e.address}`} className={addressCardClass(e.role)}>
-              <div className={accentBarClass(e.role)} aria-hidden />
-              <div className="p-5 space-y-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <div className={avatarClass(e.role)}>{contactInitial(e.fullName)}</div>
-                    <div className="min-w-0">
-                      <p className="text-base font-semibold text-neutral-900 truncate">{e.fullName}</p>
-                      <p className="text-xs text-neutral-500 mt-0.5">Last seen {formatSeen(e.lastSeenAt)}</p>
+        {!loading && !error && entries.length === 0 && (
+          <RiderEmptyState
+            icon={<BookIcon className="h-7 w-7" />}
+            title="No contacts yet"
+            description="Pick up or complete deliveries to build your address book."
+          />
+        )}
+
+        {!loading && !error && entries.length > 0 && filtered.length === 0 && hasQuery && (
+          <RiderEmptyState
+            icon={<SearchIcon className="h-7 w-7" />}
+            title="No matches"
+            description="Try a different name, address, phone number, or role."
+          />
+        )}
+
+        {!loading && !error && filtered.length > 0 && (
+          <ul className="space-y-4">
+            {filtered.map((e) => (
+              <li key={`${e.role}-${e.address}`} className={riderCard}>
+                <div className={e.role === "sender" ? riderCardAccentAmber : riderCardAccentPurple} aria-hidden />
+                <div className="space-y-4 p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className={avatarClass(e.role)}>{contactInitial(e.fullName)}</div>
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-semibold text-slate-900">{e.fullName}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">Last seen {formatSeen(e.lastSeenAt)}</p>
+                      </div>
                     </div>
+                    <span className={roleBadge(e.role)}>{roleLabel(e.role)}</span>
                   </div>
-                  <span className={roleBadgeClass(e.role)}>{roleLabel(e.role)}</span>
-                </div>
-                <div
-                  className={
-                    e.role === "sender"
-                      ? "rounded-xl border border-violet-200/80 bg-gradient-to-br from-violet-50/90 to-fuchsia-50/30 p-3 shadow-[0_0_20px_rgba(139,92,246,0.15)]"
-                      : "rounded-xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/90 to-cyan-50/30 p-3 shadow-[0_0_20px_rgba(16,185,129,0.15)]"
-                  }
-                >
-                  <p className="flex items-start gap-1.5 text-xs font-bold uppercase tracking-wide text-neutral-700">
-                    <LocationPinIcon
-                      className={
-                        e.role === "sender"
-                          ? "mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-600 drop-shadow-[0_0_6px_rgba(139,92,246,0.6)]"
-                          : "mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 drop-shadow-[0_0_6px_rgba(16,185,129,0.6)]"
-                      }
-                    />
-                    Address
+                  <div className={e.role === "sender" ? riderNeonBoxAmber : riderNeonBoxPurple}>
+                    <p className="flex items-start gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-700">
+                      <LocationPinIcon
+                        className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${e.role === "sender" ? "text-amber-600" : "text-[#81007f]"}`}
+                      />
+                      Address
+                    </p>
+                    <p className="mt-1.5 text-sm leading-relaxed text-slate-700">{e.address}</p>
+                  </div>
+                  <p className="flex items-center gap-2 text-sm text-slate-700">
+                    <PhoneIcon className="h-4 w-4 shrink-0 text-[#81007f]" />
+                    {e.phone || "—"}
                   </p>
-                  <p className="mt-1.5 text-sm leading-relaxed text-neutral-700">{e.address}</p>
                 </div>
-                <p className="flex items-center gap-2 text-sm text-neutral-700">
-                  <PhoneIcon className="h-4 w-4 shrink-0 text-[#81007f]/70" />
-                  {e.phone || "—"}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </RiderShell>
   );
 }

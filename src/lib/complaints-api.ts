@@ -91,3 +91,26 @@ export function reporterTypeClass(type: string): string {
     ? `${base} bg-purple-100 text-purple-800`
     : `${base} bg-sky-100 text-sky-800`;
 }
+
+/** Dark / neon admin chips (matches `complaintStatusClass`). */
+export function complaintStatusNeonClass(status: string): string {
+  const base = "inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold capitalize";
+  switch (status) {
+    case "open":
+      return `${base} border-amber-400/45 bg-amber-500/15 text-amber-100 shadow-[0_0_16px_rgba(251,191,36,0.2)]`;
+    case "in_review":
+      return `${base} border-sky-400/45 bg-sky-500/15 text-sky-100 shadow-[0_0_16px_rgba(56,189,248,0.22)]`;
+    case "resolved":
+      return `${base} border-emerald-400/50 bg-emerald-500/15 text-emerald-100 shadow-[0_0_16px_rgba(52,211,153,0.25)]`;
+    default:
+      return `${base} border-white/15 bg-white/10 text-white/80 shadow-[0_0_12px_rgba(255,255,255,0.06)]`;
+  }
+}
+
+/** Dark / neon admin chips (matches `reporterTypeClass`). */
+export function reporterTypeNeonClass(type: string): string {
+  const base = "inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold capitalize";
+  return type === "rider"
+    ? `${base} border-fuchsia-400/45 bg-fuchsia-500/15 text-fuchsia-100 shadow-[0_0_16px_rgba(232,121,249,0.22)]`
+    : `${base} border-cyan-400/40 bg-cyan-500/15 text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.2)]`;
+}

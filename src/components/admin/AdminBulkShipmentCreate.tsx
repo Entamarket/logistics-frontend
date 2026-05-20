@@ -17,8 +17,9 @@ import {
 
 const MAX_ROWS = 20;
 const inputClass =
-  "mt-1 w-full min-h-[40px] rounded-lg border border-neutral-300 bg-white px-3 text-sm text-neutral-900 placeholder:text-neutral-500 focus:border-[#81007f] focus:outline-none focus:ring-1 focus:ring-[#81007f]";
-const labelClass = "text-sm font-medium text-neutral-900";
+  "mt-1 w-full min-h-[40px] rounded-lg border border-white/15 bg-white/5 px-3 text-sm text-white placeholder:text-white/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] focus:border-fuchsia-400/50 focus:outline-none focus:ring-1 focus:ring-fuchsia-500/35";
+const labelClass = "text-sm font-medium text-white/85";
+const sectionLabelClass = "text-xs font-semibold uppercase tracking-wider text-fuchsia-200/55";
 
 function toDateString(d: Date): string {
   const y = d.getFullYear();
@@ -258,31 +259,45 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
   }
 
   if (loadingMeta) {
-    return <p className="text-sm text-neutral-500">Loading clients and riders…</p>;
+    return (
+      <div
+        className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm text-white/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+        role="status"
+      >
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-fuchsia-400/30 border-t-fuchsia-300" />
+        Loading clients and riders…
+      </div>
+    );
   }
 
   const succeeded = results?.filter((r) => r.success).length ?? 0;
   const failed = results?.filter((r) => !r.success).length ?? 0;
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <p className="text-sm text-neutral-600">
+    <div className="max-w-4xl space-y-6">
+      <p className="text-sm leading-relaxed text-white/55">
         Create multiple shipments for one client and assign riders. Use a default rider for all rows, or override per
         shipment.
       </p>
 
       {results && (
-        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 space-y-3">
-          <p className="text-sm font-medium text-neutral-900">
+        <div className="space-y-3 rounded-2xl border border-emerald-400/25 bg-emerald-950/20 p-4 shadow-[0_0_28px_rgba(52,211,153,0.12),inset_0_1px_0_rgba(255,255,255,0.06)]">
+          <p className="text-sm font-semibold text-white/95">
             {succeeded} created and assigned
             {failed > 0 ? `, ${failed} failed` : ""}.
           </p>
           <ul className="space-y-2 text-sm">
             {results.map((r) => (
-              <li key={r.index} className={r.success ? "text-green-800" : "text-red-700"}>
+              <li
+                key={r.index}
+                className={r.success ? "text-emerald-200/95" : "text-red-200/95"}
+              >
                 Shipment {r.index + 1}:{" "}
                 {r.success && r.shipmentId ? (
-                  <Link href={`/admin/shipments/${r.shipmentId}`} className="font-medium text-[#81007f] hover:underline">
+                  <Link
+                    href={`/admin/shipments/${r.shipmentId}`}
+                    className="font-semibold text-fuchsia-200 underline decoration-fuchsia-400/50 underline-offset-2 hover:text-fuchsia-100"
+                  >
                     #{shortShipmentId(r.shipmentId)}
                   </Link>
                 ) : (
@@ -295,7 +310,7 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
             <button
               type="button"
               onClick={handleReset}
-              className="text-sm font-medium text-[#81007f] hover:underline min-h-[44px]"
+              className="min-h-[44px] rounded-lg border border-fuchsia-400/35 bg-fuchsia-500/10 px-3 text-sm font-semibold text-fuchsia-100 shadow-[0_0_16px_rgba(232,121,249,0.15)] transition hover:bg-fuchsia-500/20"
             >
               Create another batch
             </button>
@@ -303,7 +318,7 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
               <button
                 type="button"
                 onClick={onViewList}
-                className="text-sm font-medium text-neutral-700 hover:underline min-h-[44px]"
+                className="min-h-[44px] rounded-lg border border-white/15 bg-white/5 px-3 text-sm font-semibold text-white/80 transition hover:bg-white/10"
               >
                 View all shipments
               </button>
@@ -313,7 +328,7 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-xl border border-neutral-200 bg-white p-4">
+        <div className="grid grid-cols-1 gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:grid-cols-2">
           <label className="block sm:col-span-2">
             <span className={labelClass}>Search client</span>
             <input
@@ -361,15 +376,17 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
         {rows.map((row, index) => (
           <fieldset
             key={row.localId}
-            className="rounded-xl border border-neutral-200 bg-white p-4 space-y-4"
+            className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-[0_0_32px_-12px_rgba(129,0,127,0.25),inset_0_1px_0_rgba(255,255,255,0.06)]"
           >
             <div className="flex items-center justify-between gap-2">
-              <legend className="text-sm font-semibold text-[#81007f]">Shipment {index + 1}</legend>
+              <legend className="text-sm font-bold text-fuchsia-200 drop-shadow-[0_0_12px_rgba(232,121,249,0.35)]">
+                Shipment {index + 1}
+              </legend>
               {rows.length > 1 && (
                 <button
                   type="button"
                   onClick={() => removeRow(row.localId)}
-                  className="text-xs font-medium text-red-600 hover:underline"
+                  className="text-xs font-semibold text-red-300/90 hover:text-red-200 hover:underline"
                 >
                   Remove
                 </button>
@@ -392,7 +409,7 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
               </label>
               <label className="block">
                 <span className={labelClass}>
-                  Rider override <span className="font-normal text-neutral-600">(optional)</span>
+                  Rider override <span className="font-normal text-white/45">(optional)</span>
                 </span>
                 <select
                   value={row.riderIdOverride}
@@ -409,8 +426,8 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
               </label>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <p className="sm:col-span-3 text-xs font-medium text-neutral-500 uppercase">Sender</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <p className={`sm:col-span-3 ${sectionLabelClass}`}>Sender</p>
               <input
                 placeholder="Full name"
                 value={row.sender.fullName}
@@ -440,8 +457,8 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <p className="sm:col-span-3 text-xs font-medium text-neutral-500 uppercase">Recipient</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <p className={`sm:col-span-3 ${sectionLabelClass}`}>Recipient</p>
               <input
                 placeholder="Full name"
                 value={row.recipient.fullName}
@@ -471,8 +488,8 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
               />
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <p className="col-span-full text-xs font-medium text-neutral-500 uppercase">Package</p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <p className={`col-span-full ${sectionLabelClass}`}>Package</p>
               <input
                 placeholder="Type"
                 value={row.pkg.type}
@@ -573,14 +590,17 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
             type="button"
             onClick={addRow}
             disabled={rows.length >= MAX_ROWS}
-            className="min-h-[44px] px-4 rounded-lg border border-[#81007f] text-sm font-medium text-[#81007f] hover:bg-[#81007f]/5 disabled:opacity-50"
+            className="min-h-[44px] rounded-xl border border-fuchsia-400/40 bg-fuchsia-500/10 px-4 text-sm font-semibold text-fuchsia-100 shadow-[0_0_18px_rgba(232,121,249,0.15)] transition hover:bg-fuchsia-500/20 disabled:opacity-45"
           >
             Add shipment ({rows.length}/{MAX_ROWS})
           </button>
         </div>
 
         {error && (
-          <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700" role="alert">
+          <div
+            className="rounded-2xl border border-red-400/40 bg-red-950/40 px-4 py-3 text-sm text-red-100 shadow-[0_0_28px_rgba(248,113,113,0.2)]"
+            role="alert"
+          >
             {error}
           </div>
         )}
@@ -588,13 +608,13 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
         <button
           type="submit"
           disabled={submitting || clients.length === 0 || riders.length === 0}
-          className="inline-flex justify-center items-center min-h-[44px] px-6 rounded-lg bg-[#81007f] text-white font-medium hover:bg-[#6a0068] disabled:opacity-60"
+          className="inline-flex min-h-[48px] items-center justify-center rounded-xl bg-gradient-to-r from-[#81007f] to-fuchsia-600 px-6 text-sm font-semibold text-white shadow-[0_0_28px_rgba(129,0,127,0.45),0_12px_24px_-8px_rgba(0,0,0,0.45)] ring-1 ring-white/15 transition hover:shadow-[0_0_40px_rgba(217,70,239,0.55)] disabled:opacity-55"
         >
           {submitting ? "Creating…" : `Create ${rows.length} shipment${rows.length > 1 ? "s" : ""} & assign`}
         </button>
 
         {(clients.length === 0 || riders.length === 0) && (
-          <p className="text-sm text-amber-700">
+          <p className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 shadow-[0_0_20px_rgba(251,191,36,0.12)]">
             {clients.length === 0 && "No active clients available. "}
             {riders.length === 0 && "No available riders for assignment."}
           </p>

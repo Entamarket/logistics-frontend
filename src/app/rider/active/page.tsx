@@ -14,6 +14,23 @@ import {
 import { getMyRiderProfile, updateMyRiderLocation } from "@/lib/riders-api";
 import { ShipmentMap } from "@/components/maps/ShipmentMap";
 import { OpenInGoogleMapsButton } from "@/components/maps/OpenInGoogleMapsButton";
+import {
+  RiderEmptyState,
+  RiderErrorAlert,
+  RiderLoadingBlock,
+  RiderPageHeader,
+  RiderShell,
+  RiderSuccessAlert,
+  RiderWarningAlert,
+  riderBtnAccent,
+  riderBtnPrimary,
+  riderBtnSecondary,
+  riderCard,
+  riderCardAccentPurple,
+  riderNeonBoxAmber,
+  riderNeonBoxPurple,
+  riderStatusBadge,
+} from "@/components/rider/RiderUI";
 
 const AWAITING = "awaiting_rider_response";
 
@@ -235,46 +252,62 @@ export default function RiderActiveDeliveryPage() {
     await load();
   }
 
-  if (loading) {
+  function TruckIcon({ className }: { className?: string }) {
     return (
-      <div className="max-w-4xl">
-        <h1 className="text-xl sm:text-2xl font-bold text-[#81007f]">Active delivery</h1>
-        <p className="mt-4 text-sm text-neutral-500">Loading…</p>
-      </div>
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10m10 0h4m-4 0a2 2 0 104 0m6 0a2 2 0 104 0M5 16H3m2-8h2m10 0h2"
+        />
+      </svg>
     );
   }
 
+  if (loading) {
+    return (
+      <RiderShell className="max-w-4xl">
+        <div className="space-y-6">
+          <RiderPageHeader
+            badge="On route"
+            title="Active delivery"
+            description="Loading your current jobs…"
+            icon={<TruckIcon className="h-6 w-6" />}
+          />
+          <RiderLoadingBlock label="Loading active deliveries…" />
+        </div>
+      </RiderShell>
+    );
+  }
+
+  const actionIsSuccess =
+    actionMessage.startsWith("Marked") || actionMessage.startsWith("Offer accepted");
+
   return (
-    <div className="max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-[#81007f]">Active delivery</h1>
-        <p className="mt-2 text-sm text-neutral-600">
-          New offers must be accepted within 3 minutes or they will go to another rider. Accept to commit, or decline to
-          pass. Your location is shared with the sender while you have an active job (updates about every 15 seconds).
-        </p>
-      </div>
+    <RiderShell className="max-w-4xl">
+      <div className="space-y-6">
+        <RiderPageHeader
+          badge="On route"
+          title="Active delivery"
+          description="New offers must be accepted within 3 minutes or they go to another rider. Your location is shared with the sender while you have an active job (about every 15 seconds)."
+          icon={<TruckIcon className="h-6 w-6" />}
+        />
 
-      {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700" role="alert">
-          {error}
-        </div>
-      )}
-      {actionMessage && (
-        <div
-          className={`rounded-lg border px-4 py-3 text-sm ${
-            actionMessage.startsWith("Marked") || actionMessage.startsWith("Offer accepted")
-              ? "bg-green-50 border-green-200 text-green-800"
-              : "bg-amber-50 border-amber-200 text-amber-900"
-          }`}
-          role="status"
-        >
-          {actionMessage}
-        </div>
-      )}
+        {error && <RiderErrorAlert>{error}</RiderErrorAlert>}
+        {actionMessage &&
+          (actionIsSuccess ? (
+            <RiderSuccessAlert>{actionMessage}</RiderSuccessAlert>
+          ) : (
+            <RiderWarningAlert>{actionMessage}</RiderWarningAlert>
+          ))}
 
-      {shipments.length === 0 ? (
-        <p className="text-sm text-neutral-500">You do not have an active delivery right now.</p>
-      ) : (
+        {shipments.length === 0 ? (
+          <RiderEmptyState
+            icon={<TruckIcon className="h-7 w-7" />}
+            title="No active delivery"
+            description="When you accept a job it will show up here with route, contacts, and status actions."
+          />
+        ) : (
         <ul className="space-y-6">
           {shipments.map((s) => {
             const awaiting = s.status === AWAITING;
@@ -291,29 +324,26 @@ export default function RiderActiveDeliveryPage() {
             const showMap = Boolean(pickup || recipient || s.recipientDetails.address);
 
             return (
-              <li
-                key={s._id}
-                className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm space-y-3"
-              >
+              <li key={s._id} className={`${riderCard} space-y-0`}>
+                <div className={riderCardAccentPurple} aria-hidden />
+                <div className="space-y-4 p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">Shipment</span>
-                  <span className="rounded-full bg-[#81007f]/10 px-2.5 py-0.5 text-xs font-medium text-[#81007f]">
-                    {formatStatus(s.status)}
-                  </span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Shipment</span>
+                  <span className={riderStatusBadge(s.status)}>{formatStatus(s.status)}</span>
                 </div>
                 {awaiting && s.riderResponseDeadline && (
-                  <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <RiderWarningAlert>
                     Respond by {formatDeadline(s.riderResponseDeadline)} or this offer will move to another rider.
-                  </p>
+                  </RiderWarningAlert>
                 )}
-                <p className="text-sm text-neutral-600">
-                  <span className="font-medium text-neutral-800">Price:</span> ₦{s.price.toLocaleString()} ·{" "}
-                  <span className="font-medium text-neutral-800">Payment:</span> {s.paymentStatus}
+                <p className="text-sm text-slate-600">
+                  <span className="font-semibold text-slate-800">Price:</span> ₦{s.price.toLocaleString()} ·{" "}
+                  <span className="font-semibold text-slate-800">Payment:</span> {s.paymentStatus}
                 </p>
 
                 {showMap && (
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold text-[#81007f] uppercase tracking-wide">Route</p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#81007f]">Route</p>
                     <ShipmentMap
                       pickup={pickup}
                       recipient={recipient}
@@ -344,33 +374,33 @@ export default function RiderActiveDeliveryPage() {
                 )}
 
                 <div className="grid gap-3 sm:grid-cols-2 text-sm">
-                  <div>
-                    <p className="font-semibold text-[#81007f]">Pickup (sender)</p>
-                    <p className="text-neutral-800">{s.senderDetails.fullName}</p>
-                    <p className="text-neutral-600">{s.senderDetails.address}</p>
-                    <p className="text-neutral-600">{s.senderDetails.phone}</p>
+                  <div className={riderNeonBoxAmber}>
+                    <p className="font-bold text-amber-900">Pickup (sender)</p>
+                    <p className="mt-1 text-slate-800">{s.senderDetails.fullName}</p>
+                    <p className="text-slate-600">{s.senderDetails.address}</p>
+                    <p className="text-slate-600">{s.senderDetails.phone}</p>
                   </div>
-                  <div>
-                    <p className="font-semibold text-[#81007f]">Delivery (recipient)</p>
-                    <p className="text-neutral-800">{s.recipientDetails.fullName}</p>
-                    <p className="text-neutral-600">{s.recipientDetails.address}</p>
-                    <p className="text-neutral-600">{s.recipientDetails.phone}</p>
+                  <div className={riderNeonBoxPurple}>
+                    <p className="font-bold text-[#6a0068]">Delivery (recipient)</p>
+                    <p className="mt-1 text-slate-800">{s.recipientDetails.fullName}</p>
+                    <p className="text-slate-600">{s.recipientDetails.address}</p>
+                    <p className="text-slate-600">{s.recipientDetails.phone}</p>
                   </div>
                 </div>
-                <div className="text-sm text-neutral-600">
+                <div className="text-sm text-slate-600">
                   <p>
-                    <span className="font-medium text-neutral-800">Package:</span> {s.packageDetails.type} ·{" "}
+                    <span className="font-semibold text-slate-800">Package:</span> {s.packageDetails.type} ·{" "}
                     {s.packageDetails.weight} kg · qty {s.packageDetails.quantity}
                   </p>
                   {s.packageDetails.note ? <p className="mt-1">Note: {s.packageDetails.note}</p> : null}
                 </div>
                 {awaiting ? (
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                     <button
                       type="button"
                       onClick={() => handleAccept(s._id)}
                       disabled={busy}
-                      className="min-h-[44px] flex-1 rounded-lg bg-[#81007f] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#6a0068] disabled:opacity-60"
+                      className={`${riderBtnPrimary} flex-1`}
                     >
                       {busy && actionKind === "accept" ? "Accepting…" : "Accept"}
                     </button>
@@ -378,7 +408,7 @@ export default function RiderActiveDeliveryPage() {
                       type="button"
                       onClick={() => handleReject(s._id)}
                       disabled={busy}
-                      className="min-h-[44px] flex-1 rounded-lg border-2 border-neutral-400 px-4 py-2.5 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-60"
+                      className={`${riderBtnSecondary} flex-1`}
                     >
                       {busy && actionKind === "reject" ? "Declining…" : "Decline"}
                     </button>
@@ -390,7 +420,7 @@ export default function RiderActiveDeliveryPage() {
                         type="button"
                         onClick={() => handlePickedUp(s._id)}
                         disabled={busy}
-                        className="min-h-[44px] rounded-lg border-2 border-[#81007f] px-4 py-2.5 text-sm font-medium text-[#81007f] hover:bg-[#81007f]/5 disabled:opacity-60"
+                        className={riderBtnSecondary}
                       >
                         {busy && actionKind === "picked_up" ? "Updating…" : "Mark picked up"}
                       </button>
@@ -400,7 +430,7 @@ export default function RiderActiveDeliveryPage() {
                         type="button"
                         onClick={() => handleInTransit(s._id)}
                         disabled={busy}
-                        className="min-h-[44px] rounded-lg border-2 border-[#81007f] px-4 py-2.5 text-sm font-medium text-[#81007f] hover:bg-[#81007f]/5 disabled:opacity-60"
+                        className={riderBtnSecondary}
                       >
                         {busy && actionKind === "in_transit" ? "Updating…" : "Mark in transit"}
                       </button>
@@ -409,17 +439,19 @@ export default function RiderActiveDeliveryPage() {
                       type="button"
                       onClick={() => handleMarkDelivered(s._id)}
                       disabled={busy}
-                      className="min-h-[44px] w-full sm:w-auto rounded-lg bg-[#81007f] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#6a0068] disabled:opacity-60"
+                      className={`${riderBtnAccent} w-full sm:w-auto`}
                     >
                       {busy && actionKind === "deliver" ? "Updating…" : "Mark as delivered"}
                     </button>
                   </div>
                 )}
+                </div>
               </li>
             );
           })}
         </ul>
-      )}
-    </div>
+        )}
+      </div>
+    </RiderShell>
   );
 }

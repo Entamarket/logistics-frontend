@@ -139,6 +139,30 @@ export function shipmentStatusClass(status: string): string {
   }
 }
 
+/** Dark / neon admin table chips (matches `shipmentStatusClass` groupings). */
+export function shipmentStatusNeonClass(status: string): string {
+  const base =
+    "inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold capitalize";
+  switch (status) {
+    case "delivered":
+      return `${base} border-emerald-400/50 bg-emerald-500/15 text-emerald-100 shadow-[0_0_16px_rgba(52,211,153,0.25)]`;
+    case "in_transit":
+    case "picked_up":
+    case "rider_assigned":
+    case "searching_rider":
+      return `${base} border-sky-400/45 bg-sky-500/15 text-sky-100 shadow-[0_0_16px_rgba(56,189,248,0.22)]`;
+    case "awaiting_rider_response":
+      return `${base} border-fuchsia-400/45 bg-fuchsia-500/15 text-fuchsia-100 shadow-[0_0_16px_rgba(232,121,249,0.22)]`;
+    case "scheduled":
+    case "pending":
+      return `${base} border-amber-400/45 bg-amber-500/15 text-amber-100 shadow-[0_0_16px_rgba(251,191,36,0.2)]`;
+    case "cancelled":
+      return `${base} border-red-400/50 bg-red-500/15 text-red-100 shadow-[0_0_16px_rgba(248,113,113,0.22)]`;
+    default:
+      return `${base} border-white/15 bg-white/10 text-white/80 shadow-[0_0_12px_rgba(255,255,255,0.06)]`;
+  }
+}
+
 export function shortShipmentId(id: string): string {
   return id.length > 8 ? id.slice(-8).toUpperCase() : id.toUpperCase();
 }
@@ -276,6 +300,21 @@ export function clientStatusClass(status: string): string {
       return `${base} bg-red-100 text-red-800`;
     default:
       return `${base} bg-neutral-100 text-neutral-800`;
+  }
+}
+
+/** Dark / neon admin table chips (matches `clientStatusClass`). */
+export function clientStatusNeonClass(status: string): string {
+  const base = "inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold capitalize";
+  switch (status) {
+    case "active":
+      return `${base} border-emerald-400/50 bg-emerald-500/15 text-emerald-100 shadow-[0_0_16px_rgba(52,211,153,0.25)]`;
+    case "suspended":
+      return `${base} border-amber-400/45 bg-amber-500/15 text-amber-100 shadow-[0_0_16px_rgba(251,191,36,0.2)]`;
+    case "blocked":
+      return `${base} border-red-400/50 bg-red-500/15 text-red-100 shadow-[0_0_16px_rgba(248,113,113,0.22)]`;
+    default:
+      return `${base} border-white/15 bg-white/10 text-white/80 shadow-[0_0_12px_rgba(255,255,255,0.06)]`;
   }
 }
 
