@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
 import { ContactSection } from "./ContactSection";
+import { LandingFooter } from "./LandingFooter";
 
 const BRAND = "#81007f";
 
@@ -537,33 +538,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-purple-100/80 bg-white/80 px-4 py-10 backdrop-blur-sm sm:px-6">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 sm:flex-row">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#81007f] text-xs font-bold text-white">
-              E
-            </span>
-            <span className="text-sm font-semibold text-neutral-700">
-              EntaLogistics © {new Date().getFullYear()}
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-neutral-500">
-            <Link href="/auth/login" className="transition hover:text-[#81007f]">
-              Log in
-            </Link>
-            <Link href="/auth/signup" className="transition hover:text-[#81007f]">
-              Sign up
-            </Link>
-            <a href="#features" className="transition hover:text-[#81007f]">
-              Features
-            </a>
-            <a href="#contact" className="transition hover:text-[#81007f]">
-              Contact
-            </a>
-          </div>
-        </div>
-      </footer>
+      <LandingFooter />
     </div>
   );
 }
