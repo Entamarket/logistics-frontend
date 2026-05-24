@@ -8,7 +8,7 @@ import { exportFinancialReportXlsx } from "@/lib/export-financial-report-xlsx";
 const CURRENT_YEAR = new Date().getFullYear();
 
 const exportButtonClass =
-  "inline-flex shrink-0 items-center justify-center rounded-xl border border-fuchsia-400/35 bg-fuchsia-500/15 px-4 py-2.5 text-sm font-semibold text-fuchsia-100 shadow-[0_0_18px_rgba(232,121,249,0.15)] transition hover:border-fuchsia-300/50 hover:bg-fuchsia-500/25 hover:shadow-[0_0_24px_rgba(232,121,249,0.35)] disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex shrink-0 items-center justify-center rounded-xl border border-emerald-400/45 bg-emerald-500/20 px-4 py-2.5 text-sm font-semibold text-emerald-100 shadow-[0_0_18px_rgba(52,211,153,0.2)] transition hover:border-emerald-300/55 hover:bg-emerald-500/30 hover:shadow-[0_0_24px_rgba(52,211,153,0.35)] disabled:cursor-not-allowed disabled:opacity-50";
 
 const THEME = "#81007f";
 const THEME_DARK = "#5c005a";
