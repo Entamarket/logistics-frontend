@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
 import { ContactSection } from "./ContactSection";
 import { LandingFooter } from "./LandingFooter";
-
-const BRAND = "#81007f";
+import { LandingImage } from "./LandingImage";
+import { LANDING_IMAGES } from "./landing-images";
 
 function RevealSection({
   id,
@@ -70,86 +70,76 @@ function HeroVisual() {
         aria-hidden
       />
 
-      <div className="landing-animate-float relative overflow-hidden rounded-3xl border border-purple-200/60 bg-white/90 p-6 shadow-[0_0_0_1px_rgba(129,0,127,0.12),0_24px_64px_rgba(129,0,127,0.18),0_0_80px_rgba(168,85,247,0.12)] backdrop-blur-sm sm:p-8">
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
-              Live tracking
+      <div className="landing-animate-float relative">
+        <LandingImage
+          image={LANDING_IMAGES.hero}
+          aspect="hero"
+          priority
+          rounded="rounded-3xl"
+          className="shadow-[0_24px_64px_rgba(129,0,127,0.2)] ring-1 ring-purple-200/50"
+          sizes="(max-width: 1024px) 100vw, 560px"
+        />
+
+        {/* Live tracking overlay — keeps motion on top of hero photo */}
+        <div className="absolute bottom-4 left-4 right-4 overflow-hidden rounded-2xl border border-white/80 bg-white/95 p-4 shadow-[0_12px_40px_rgba(15,23,42,0.15)] backdrop-blur-md sm:bottom-6 sm:left-6 sm:right-6 sm:p-5">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+              </span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
+                Live tracking
+              </span>
+            </div>
+            <span className="rounded-full bg-[#81007f]/10 px-2.5 py-0.5 text-[10px] font-bold text-[#81007f] sm:text-xs">
+              Instant delivery
             </span>
           </div>
-          <span className="rounded-full bg-[#81007f]/10 px-3 py-1 text-xs font-bold text-[#81007f]">
-            Instant delivery
-          </span>
-        </div>
 
-        <svg
-          viewBox="0 0 400 220"
-          className="w-full"
-          aria-hidden
-          role="img"
-        >
-          <defs>
-            <linearGradient id="routeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#9d33a0" />
-              <stop offset="50%" stopColor="#81007f" />
-              <stop offset="100%" stopColor="#d946ef" />
-            </linearGradient>
-          </defs>
+          <svg viewBox="0 0 400 80" className="w-full" aria-hidden>
+            <defs>
+              <linearGradient id="routeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#9d33a0" />
+                <stop offset="50%" stopColor="#81007f" />
+                <stop offset="100%" stopColor="#d946ef" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M20 55 Q100 15 200 40 T380 25"
+              fill="none"
+              stroke="url(#routeGrad)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              className="landing-route-line"
+            />
+            <circle cx="20" cy="55" r="4" fill="#81007f" />
+            <circle cx="200" cy="40" r="3" fill="#f59e0b" />
+            <circle cx="380" cy="25" r="4" fill="#10b981" />
+          </svg>
 
-          <rect x="0" y="0" width="400" height="220" rx="16" fill="#faf8fb" />
-
-          <path
-            d="M40 160 Q120 80 200 120 T360 90"
-            fill="none"
-            stroke="url(#routeGrad)"
-            strokeWidth="3"
-            strokeLinecap="round"
-            className="landing-route-line"
-          />
-
-          <circle cx="40" cy="160" r="10" fill="#81007f" opacity="0.2" />
-          <circle cx="40" cy="160" r="5" fill="#81007f" />
-
-          <circle cx="200" cy="120" r="8" fill="#f59e0b" opacity="0.25" />
-          <circle cx="200" cy="120" r="4" fill="#f59e0b" />
-
-          <circle cx="360" cy="90" r="10" fill="#10b981" opacity="0.2" />
-          <circle cx="360" cy="90" r="5" fill="#10b981" />
-
-          <g className="landing-animate-float-delayed" transform="translate(168, 95)">
-            <rect x="0" y="8" width="48" height="28" rx="6" fill="#81007f" />
-            <rect x="36" y="4" width="20" height="20" rx="4" fill="#6a0068" />
-            <circle cx="12" cy="40" r="6" fill="#374151" />
-            <circle cx="40" cy="40" r="6" fill="#374151" />
-          </g>
-        </svg>
-
-        <div className="mt-5 grid grid-cols-3 gap-3">
-          {[
-            { label: "Pickup", value: "12:04", sub: "Lagos" },
-            { label: "In transit", value: "24 min", sub: "En route" },
-            { label: "Drop-off", value: "12:38", sub: "Abuja" },
-          ].map((item) => (
-            <div
-              key={item.label}
-              className="rounded-xl border border-purple-100/80 bg-gradient-to-b from-white to-fuchsia-50/40 px-3 py-2.5 text-center"
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
-                {item.label}
-              </p>
-              <p className="mt-0.5 text-sm font-bold text-[#81007f]">{item.value}</p>
-              <p className="text-[10px] text-neutral-500">{item.sub}</p>
-            </div>
-          ))}
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {[
+              { label: "Pickup", value: "12:04", sub: "Lagos" },
+              { label: "In transit", value: "24 min", sub: "En route" },
+              { label: "Drop-off", value: "12:38", sub: "Abuja" },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="rounded-lg border border-purple-100/80 bg-gradient-to-b from-white to-fuchsia-50/40 px-2 py-2 text-center"
+              >
+                <p className="text-[9px] font-semibold uppercase tracking-wide text-neutral-500 sm:text-[10px]">
+                  {item.label}
+                </p>
+                <p className="text-xs font-bold text-[#81007f] sm:text-sm">{item.value}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
       <div
-        className="landing-animate-float-delayed absolute -left-4 top-8 hidden rounded-2xl border border-white/80 bg-white px-4 py-3 shadow-[0_12px_40px_rgba(129,0,127,0.15)] sm:block lg:-left-8"
+        className="landing-animate-float-delayed absolute -left-4 top-8 z-10 hidden rounded-2xl border border-white/80 bg-white px-4 py-3 shadow-[0_12px_40px_rgba(129,0,127,0.15)] sm:block lg:-left-8"
         aria-hidden
       >
         <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
@@ -159,7 +149,7 @@ function HeroVisual() {
       </div>
 
       <div
-        className="landing-animate-float absolute -right-2 bottom-12 hidden rounded-2xl border border-white/80 bg-white px-4 py-3 shadow-[0_12px_40px_rgba(129,0,127,0.15)] sm:block lg:-right-6"
+        className="landing-animate-float absolute -right-2 top-1/4 z-10 hidden rounded-2xl border border-white/80 bg-white px-4 py-3 shadow-[0_12px_40px_rgba(129,0,127,0.15)] sm:block lg:-right-6"
         aria-hidden
       >
         <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
@@ -171,6 +161,46 @@ function HeroVisual() {
         </p>
       </div>
     </div>
+  );
+}
+
+function GalleryStrip() {
+  const items = [
+    LANDING_IMAGES.galleryDelivery,
+    LANDING_IMAGES.galleryTracking,
+    LANDING_IMAGES.galleryRider,
+    LANDING_IMAGES.galleryWarehouse,
+  ] as const;
+
+  return (
+    <RevealSection className="px-4 py-16 sm:px-6 sm:py-20">
+      <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-sm font-bold uppercase tracking-widest text-[#81007f]">
+            In action
+          </p>
+          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl">
+            Logistics that looks as good as it performs
+          </h2>
+        </div>
+
+        <div className="mt-10 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          {items.map((img, i) => (
+            <LandingImage
+              key={img.filename}
+              image={img}
+              aspect="card"
+              rounded="rounded-2xl"
+              className={`shadow-[0_8px_28px_rgba(129,0,127,0.1)] ring-1 ring-purple-200/40 ${
+                i === 0 ? "lg:row-span-1" : ""
+              }`}
+              sizes="(max-width: 640px) 50vw, 25vw"
+              animate={i % 2 === 0}
+            />
+          ))}
+        </div>
+      </div>
+    </RevealSection>
   );
 }
 
@@ -320,6 +350,8 @@ export function LandingPage() {
         </div>
       </div>
 
+      <GalleryStrip />
+
       {/* Features */}
       <RevealSection id="features" className="px-4 py-20 sm:px-6 sm:py-28">
         <div className="mx-auto max-w-6xl">
@@ -428,31 +460,43 @@ export function LandingPage() {
                 step: "01",
                 title: "Create & get a quote",
                 desc: "Enter pickup and drop-off details, dimensions, and weight. Our calculator shows a fair price instantly.",
+                image: LANDING_IMAGES.stepQuote,
               },
               {
                 step: "02",
                 title: "Pay & dispatch",
                 desc: "Complete checkout with Paystack. Once paid, instant shipments are matched to the nearest available rider.",
+                image: LANDING_IMAGES.stepPay,
               },
               {
                 step: "03",
                 title: "Track to delivery",
                 desc: "Monitor progress on the map, get notifications, and confirm when your package arrives.",
+                image: LANDING_IMAGES.stepTrack,
               },
             ].map((item, index) => (
               <li key={item.step} className="relative">
                 {index < 2 && (
                   <div
-                    className="absolute left-1/2 top-12 hidden h-0.5 w-full bg-gradient-to-r from-[#81007f]/40 to-transparent md:block"
+                    className="absolute left-1/2 top-24 hidden h-0.5 w-full bg-gradient-to-r from-[#81007f]/40 to-transparent md:block"
                     aria-hidden
                   />
                 )}
-                <div className="relative rounded-2xl border border-purple-200/50 bg-white p-8 text-center shadow-[0_8px_32px_rgba(129,0,127,0.08)]">
-                  <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#81007f] to-fuchsia-500 font-display text-xl font-bold text-white shadow-[0_8px_24px_rgba(129,0,127,0.35)]">
-                    {item.step}
-                  </span>
-                  <h3 className="mt-5 text-lg font-bold text-neutral-900">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-neutral-600">{item.desc}</p>
+                <div className="relative overflow-hidden rounded-2xl border border-purple-200/50 bg-white text-center shadow-[0_8px_32px_rgba(129,0,127,0.08)]">
+                  <LandingImage
+                    image={item.image}
+                    aspect="card"
+                    rounded="rounded-none"
+                    className="w-full"
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                  />
+                  <div className="p-8">
+                    <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#81007f] to-fuchsia-500 font-display text-xl font-bold text-white shadow-[0_8px_24px_rgba(129,0,127,0.35)]">
+                      {item.step}
+                    </span>
+                    <h3 className="mt-5 text-lg font-bold text-neutral-900">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-neutral-600">{item.desc}</p>
+                  </div>
                 </div>
               </li>
             ))}
@@ -463,9 +507,9 @@ export function LandingPage() {
       {/* Roles */}
       <RevealSection id="roles" className="px-4 py-20 sm:px-6 sm:py-28">
         <div className="mx-auto max-w-6xl">
-          <div className="overflow-hidden rounded-3xl border border-purple-200/60 bg-gradient-to-br from-[#6a0068] via-[#81007f] to-fuchsia-600 p-8 text-white shadow-[0_24px_80px_rgba(129,0,127,0.35)] sm:p-12 lg:p-16">
-            <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-              <div>
+          <div className="overflow-hidden rounded-3xl border border-purple-200/60 bg-gradient-to-br from-[#6a0068] via-[#81007f] to-fuchsia-600 text-white shadow-[0_24px_80px_rgba(129,0,127,0.35)]">
+            <div className="grid lg:grid-cols-2 lg:items-stretch">
+              <div className="p-8 sm:p-12 lg:p-14">
                 <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
                   Built for clients, riders, and operators
                 </h2>
@@ -487,22 +531,37 @@ export function LandingPage() {
                     Rider or admin login
                   </Link>
                 </div>
+
+                <div className="mt-10 grid gap-4 sm:grid-cols-3">
+                  {[
+                    { role: "Clients", desc: "Book, pay, track, and manage shipments" },
+                    { role: "Riders", desc: "Accept jobs, navigate, and complete deliveries" },
+                    { role: "Admins", desc: "Oversee fleet, reports, and support" },
+                  ].map((card) => (
+                    <div
+                      key={card.role}
+                      className="rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur-sm transition hover:bg-white/15"
+                    >
+                      <p className="font-display text-lg font-bold">{card.role}</p>
+                      <p className="mt-1 text-sm text-white/80">{card.desc}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-                {[
-                  { role: "Clients", desc: "Book, pay, track, and manage shipments" },
-                  { role: "Riders", desc: "Accept jobs, navigate, and complete deliveries" },
-                  { role: "Admins", desc: "Oversee fleet, reports, and support" },
-                ].map((card) => (
-                  <div
-                    key={card.role}
-                    className="rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur-sm transition hover:bg-white/15"
-                  >
-                    <p className="font-display text-lg font-bold">{card.role}</p>
-                    <p className="mt-1 text-sm text-white/80">{card.desc}</p>
-                  </div>
-                ))}
+              <div className="relative min-h-[300px] lg:min-h-[420px]">
+                <LandingImage
+                  image={LANDING_IMAGES.rolesTeam}
+                  variant="dark"
+                  rounded="rounded-none"
+                  fill
+                  className="absolute inset-0"
+                  sizes="(max-width: 1024px) 100vw, 480px"
+                />
+                <div
+                  className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#81007f] via-[#81007f]/40 to-transparent lg:via-[#81007f]/80"
+                  aria-hidden
+                />
               </div>
             </div>
           </div>
@@ -521,20 +580,29 @@ export function LandingPage() {
 
       {/* CTA */}
       <section className="px-4 pb-8 sm:px-6">
-        <div className="mx-auto max-w-3xl rounded-3xl border border-purple-200/60 bg-white px-6 py-12 text-center shadow-[0_16px_48px_rgba(129,0,127,0.1)] sm:px-12">
-          <h2 className="font-display text-2xl font-bold text-neutral-900 sm:text-3xl">
-            Ready to move your next shipment?
-          </h2>
-          <p className="mt-3 text-neutral-600">
-            Join EntaLogistics and experience delivery that keeps you in the loop.
-          </p>
-          <Link
-            href="/auth/signup"
-            className="mt-8 inline-flex min-h-[48px] items-center justify-center rounded-2xl px-8 text-base font-semibold text-white shadow-[0_8px_32px_rgba(129,0,127,0.4)] transition hover:shadow-[0_12px_40px_rgba(129,0,127,0.5)]"
-            style={{ background: `linear-gradient(135deg, ${BRAND}, #d946ef)` }}
-          >
-            Get started — it&apos;s free to sign up
-          </Link>
+        <div className="relative mx-auto min-h-[300px] max-w-3xl overflow-hidden rounded-3xl border border-purple-200/60 shadow-[0_16px_48px_rgba(129,0,127,0.15)] sm:min-h-[340px]">
+          <LandingImage
+            image={LANDING_IMAGES.ctaBackground}
+            rounded="rounded-none"
+            fill
+            className="absolute inset-0"
+            sizes="800px"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#6a0068]/95 via-[#81007f]/80 to-[#81007f]/60" aria-hidden />
+          <div className="relative px-6 py-14 text-center sm:px-12 sm:py-16">
+            <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">
+              Ready to move your next shipment?
+            </h2>
+            <p className="mt-3 text-white/85">
+              Join EntaLogistics and experience delivery that keeps you in the loop.
+            </p>
+            <Link
+              href="/auth/signup"
+              className="mt-8 inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-white px-8 text-base font-semibold text-[#81007f] shadow-[0_8px_32px_rgba(0,0,0,0.2)] transition hover:bg-fuchsia-50"
+            >
+              Get started — it&apos;s free to sign up
+            </Link>
+          </div>
         </div>
       </section>
 
