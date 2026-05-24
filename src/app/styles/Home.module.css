@@ -67,7 +67,7 @@
 .logo {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0;
   flex-shrink: 0;
   text-decoration: none;
   color: inherit;
@@ -234,10 +234,13 @@
   border: 2px solid #ddd;
 }
 
-.logo svg {
-  width: clamp(110px, 12vw, 150px);
-  height: auto;
+.logo svg,
+.logoSvg {
+  width: auto;
+  height: clamp(36px, 5vw, 44px);
+  max-width: 85px;
   flex-shrink: 0;
+  display: block;
 }
 
 .logo span {
@@ -246,6 +249,8 @@
   font-weight: 700;
   letter-spacing: -0.03em;
   white-space: nowrap;
+  margin-left: 4px;
+  transform: translateX(-22px);
 }
 
 .navLinks {
@@ -1028,7 +1033,28 @@
   font-size: 1.35rem;
   font-weight: 700;
   color: #111;
-  margin: 0 0 1.5rem;
+  margin: 0 0 0.35rem;
+}
+
+.formHint {
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.875rem;
+  color: #888;
+  margin: 0 0 1.25rem;
+}
+
+.contactPageLink {
+  display: inline-block;
+  font-family: var(--font-body), sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #81007f;
+  text-decoration: none;
+  margin-top: 0.5rem;
+}
+
+.contactPageLink:hover {
+  text-decoration: underline;
 }
 
 .formRow {
@@ -1052,7 +1078,8 @@
 }
 
 .formField input,
-.formField textarea {
+.formField textarea,
+.formField select {
   font-family: var(--font-body), sans-serif;
   font-size: 0.9375rem;
   padding: 0.85rem 1rem;
@@ -1066,7 +1093,8 @@
 }
 
 .formField input:focus,
-.formField textarea:focus {
+.formField textarea:focus,
+.formField select:focus {
   border-color: #81007f;
 }
 
@@ -1297,6 +1325,14 @@
     max-width: 320px;
     height: 260px;
   }
+
+  .contactInner {
+    grid-template-columns: 1fr;
+  }
+
+  .formRow {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Mobile nav + phone layout */
@@ -1329,8 +1365,11 @@
     padding: 1rem 1rem 1.25rem;
   }
 
-  .logo svg {
-    width: 100px;
+  .logo svg,
+  .logoSvg {
+    height: 38px;
+    width: auto;
+    max-width: 72px;
   }
 
   .logo span {

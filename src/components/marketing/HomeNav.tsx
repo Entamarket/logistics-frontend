@@ -8,10 +8,9 @@ import styles from "@/app/styles/Home.module.css";
 function LogoMark() {
   return (
     <svg
-      version="1.0"
+      className={styles.logoSvg}
       xmlns="http://www.w3.org/2000/svg"
-      width="180px"
-      viewBox="0 0 889.000000 226.000000"
+      viewBox="0 0 889 226"
       preserveAspectRatio="xMidYMid meet"
       aria-hidden
     >
@@ -73,9 +72,9 @@ export default function HomeNav() {
             </Link>
           </li>
           <li>
-            <Link href="/contact" className={styles.navAnchor}>
+            <a href="#contact" className={styles.navAnchor}>
               Contact
-            </Link>
+            </a>
           </li>
         </ul>
 
@@ -129,9 +128,9 @@ export default function HomeNav() {
             </Link>
           </li>
           <li>
-            <Link href="/contact" onClick={closeMenu}>
+            <a href="#contact" onClick={closeMenu}>
               Contact
-            </Link>
+            </a>
           </li>
         </ul>
 

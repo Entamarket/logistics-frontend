@@ -15,6 +15,7 @@ import {
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import SiteFooter from "@/components/marketing/SiteFooter";
 import HomeNav from "@/components/marketing/HomeNav";
+import ContactSection from "@/components/marketing/ContactSection";
 
 export default function Home() {
   return (
@@ -50,13 +51,7 @@ export default function Home() {
           <div className={styles.trackingCard}>
             <div className={styles.trackingTabs}>
               <button type="button" className={styles.tabActive}>
-                Tracking
-              </button>
-              <button type="button" className={styles.tab}>
-                Schedules
-              </button>
-              <button type="button" className={styles.tab}>
-                Offices
+                Tracking ID or Number
               </button>
             </div>
 
@@ -357,6 +352,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <ContactSection showViewAllLink />
 
       <SiteFooter />
     </div>
