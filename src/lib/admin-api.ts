@@ -33,6 +33,8 @@ export interface FinancialReports {
   currency: "NGN";
   generatedAt: string;
   monthCount: number;
+  year?: number;
+  availableYears: number[];
   allTimeRevenue: number;
   allTimeDeliveredCount: number;
   periodTotalRevenue: number;
@@ -41,9 +43,43 @@ export interface FinancialReports {
   monthly: MonthlyFinancialReport[];
 }
 
-export async function getAdminFinancialReports(months = 12) {
-  const q = months !== 12 ? `?months=${encodeURIComponent(String(months))}` : "";
-  return apiGet<FinancialReports>(`/api/admin/financial-reports${q}`);
+export async function getAdminFinancialReports(params?: { year?: number; months?: number }) {
+  const search = new URLSearchParams();
+  if (params?.year != null) {
+    search.set("year", String(params.year));
+  } else if (params?.months != null && params.months !== 12) {
+    search.set("months", String(params.months));
+  }
+  const q = search.toString();
+  return apiGet<FinancialReports>(`/api/admin/financial-reports${q ? `?${q}` : ""}`);
+}
+
+export interface MonthlyFinancialDelivery {
+  id: string;
+  price: number;
+  paymentStatus: string;
+  deliveryType: string;
+  deliveredAt: string;
+  createdAt: string;
+  senderName: string;
+  recipientName: string;
+  client: { id: string; firstName: string; lastName: string; email: string };
+  rider: AdminShipmentRider | null;
+}
+
+export interface MonthlyFinancialReportDetail {
+  yearMonth: string;
+  label: string;
+  revenue: number;
+  deliveredCount: number;
+  averageOrderValue: number;
+  deliveries: MonthlyFinancialDelivery[];
+}
+
+export async function getAdminFinancialReportMonth(yearMonth: string) {
+  return apiGet<MonthlyFinancialReportDetail>(
+    `/api/admin/financial-reports/${encodeURIComponent(yearMonth)}`
+  );
 }
 
 export interface AdminClient {
@@ -96,7 +132,7 @@ export interface AdminShipmentDetail extends AdminShipmentListItem {
   updatedAt: string;
 }
 
-export function getClientDisplayName(client: AdminClient): string {
+export function getClientDisplayName(client: Pick<AdminClient, "firstName" | "lastName" | "email">): string {
   const name = `${client.firstName} ${client.lastName}`.trim();
   return name || client.email || "—";
 }

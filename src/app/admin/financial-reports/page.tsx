@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAdminFinancialReports, type FinancialReports } from "@/lib/admin-api";
+import { exportFinancialReportXlsx } from "@/lib/export-financial-report-xlsx";
+
+const CURRENT_YEAR = new Date().getFullYear();
+
+const exportButtonClass =
+  "inline-flex shrink-0 items-center justify-center rounded-xl border border-fuchsia-400/35 bg-fuchsia-500/15 px-4 py-2.5 text-sm font-semibold text-fuchsia-100 shadow-[0_0_18px_rgba(232,121,249,0.15)] transition hover:border-fuchsia-300/50 hover:bg-fuchsia-500/25 hover:shadow-[0_0_24px_rgba(232,121,249,0.35)] disabled:cursor-not-allowed disabled:opacity-50";
 
 const THEME = "#81007f";
 const THEME_DARK = "#5c005a";
@@ -76,15 +82,21 @@ const glassSection = "rounded-2xl border border-white/10 bg-white/[0.04] p-4 sha
 
 export default function AdminFinancialReportsPage() {
   const router = useRouter();
-  const [months, setMonths] = useState(12);
+  const [year, setYear] = useState(CURRENT_YEAR);
   const [report, setReport] = useState<FinancialReports | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const yearOptions = useMemo(() => {
+    const set = new Set(report?.availableYears ?? [CURRENT_YEAR]);
+    set.add(year);
+    return [...set].sort((a, b) => b - a);
+  }, [report?.availableYears, year]);
+
   const load = useCallback(async () => {
     setError("");
     setLoading(true);
-    const res = await getAdminFinancialReports(months);
+    const res = await getAdminFinancialReports({ year });
     setLoading(false);
     if (res.success && res.data) {
       setReport(res.data);
@@ -96,7 +108,7 @@ export default function AdminFinancialReportsPage() {
       return;
     }
     setError(msg);
-  }, [router, months]);
+  }, [router, year]);
 
   useEffect(() => {
     load();
@@ -107,10 +119,7 @@ export default function AdminFinancialReportsPage() {
     return Math.max(1, ...report.monthly.map((m) => m.revenue));
   }, [report]);
 
-  const tableRows = useMemo(() => {
-    if (!report?.monthly) return [];
-    return [...report.monthly].reverse();
-  }, [report]);
+  const tableRows = useMemo(() => report?.monthly ?? [], [report]);
 
   return (
     <div className="relative isolate overflow-hidden rounded-3xl border border-fuchsia-500/25 bg-gradient-to-br from-slate-950 via-[#1a0a24] to-slate-950 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_0_80px_-20px_rgba(192,38,211,0.55),0_32px_64px_-24px_rgba(0,0,0,0.65)]">
@@ -143,22 +152,21 @@ export default function AdminFinancialReportsPage() {
               </span>
             </h1>
             <p className="max-w-2xl text-sm leading-relaxed text-white/55">
-              Monthly revenue from delivered shipments. Each row is a calendar month; totals reflect the period you
-              select below.
+              Monthly revenue from delivered shipments for the selected calendar year. Export the ledger to Excel or
+              click a month to view individual deliveries.
             </p>
             {report && (
               <p className="text-xs text-white/40">Generated {formatGeneratedAt(report.generatedAt)}</p>
             )}
           </div>
           <label className="flex w-full flex-col gap-1.5 lg:w-auto lg:shrink-0">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-fuchsia-200/70">
-              Report period
-            </span>
-            <select value={months} onChange={(e) => setMonths(Number(e.target.value))} className={selectClass}>
-              <option value={6}>Last 6 months</option>
-              <option value={12}>Last 12 months</option>
-              <option value={24}>Last 24 months</option>
-              <option value={36}>Last 36 months</option>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-fuchsia-200/70">Year</span>
+            <select value={year} onChange={(e) => setYear(Number(e.target.value))} className={selectClass}>
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
             </select>
           </label>
         </div>
@@ -186,13 +194,13 @@ export default function AdminFinancialReportsPage() {
           <>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard
-                label="Period revenue"
+                label="Year revenue"
                 value={formatCurrency(report.periodTotalRevenue)}
-                hint={`Last ${report.monthCount} months`}
+                hint={String(report.year ?? year)}
                 accent="violet"
               />
               <StatCard
-                label="Period deliveries"
+                label="Year deliveries"
                 value={report.periodTotalDelivered.toLocaleString()}
                 hint="Delivered shipments"
                 accent="emerald"
@@ -200,7 +208,7 @@ export default function AdminFinancialReportsPage() {
               <StatCard
                 label="Avg monthly revenue"
                 value={formatCurrency(report.periodAverageMonthlyRevenue)}
-                hint="Across selected period"
+                hint="Across 12 months"
                 accent="cyan"
               />
               <StatCard
@@ -219,7 +227,7 @@ export default function AdminFinancialReportsPage() {
               <div
                 className="mt-6"
                 role="img"
-                aria-label="Bar chart of monthly revenue for the selected period."
+                aria-label={`Bar chart of monthly revenue for ${report.year ?? year}.`}
               >
                 <div className="flex h-52 items-end gap-1 sm:gap-1.5">
                   {report.monthly.map((m) => {
@@ -254,13 +262,24 @@ export default function AdminFinancialReportsPage() {
             </section>
 
             <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] shadow-[0_0_40px_-10px_rgba(129,0,127,0.35),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md">
-              <div className="border-b border-white/10 px-4 py-4 sm:px-6">
-                <h2 className="text-[11px] font-bold uppercase tracking-[0.22em] text-fuchsia-200/75">
-                  Monthly report ledger
-                </h2>
-                <p className="mt-2 text-xs text-white/45">
-                  Newest months first. Revenue is the sum of shipment prices completed in that month.
-                </p>
+              <div className="flex flex-col gap-4 border-b border-white/10 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+                <div className="min-w-0">
+                  <h2 className="text-[11px] font-bold uppercase tracking-[0.22em] text-fuchsia-200/75">
+                    Monthly report ledger
+                  </h2>
+                  <p className="mt-2 text-xs text-white/45">
+                    January through December. Revenue is the sum of shipment prices completed in that month. Click a month
+                    to view deliveries.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={exportButtonClass}
+                  disabled={loading || !report}
+                  onClick={() => report && exportFinancialReportXlsx(report)}
+                >
+                  Export Excel
+                </button>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left">
@@ -287,7 +306,16 @@ export default function AdminFinancialReportsPage() {
                     {tableRows.map((row) => (
                       <tr
                         key={row.yearMonth}
-                        className="transition-colors hover:bg-white/[0.06] hover:shadow-[inset_0_0_40px_rgba(129,0,127,0.08)]"
+                        role="button"
+                        tabIndex={0}
+                        className="cursor-pointer transition-colors hover:bg-white/[0.06] hover:shadow-[inset_0_0_40px_rgba(129,0,127,0.08)]"
+                        onClick={() => router.push(`/admin/financial-reports/${row.yearMonth}`)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            router.push(`/admin/financial-reports/${row.yearMonth}`);
+                          }
+                        }}
                       >
                         <td className="px-4 py-4 text-sm font-medium text-white/95">{row.label}</td>
                         <td className="px-4 py-4 font-mono text-sm tabular-nums text-white/70">
@@ -319,7 +347,7 @@ export default function AdminFinancialReportsPage() {
                   </tbody>
                   <tfoot>
                     <tr className="border-t border-white/15 bg-white/[0.06]">
-                      <td className="px-4 py-4 text-sm font-bold text-white">Period total</td>
+                      <td className="px-4 py-4 text-sm font-bold text-white">Year total</td>
                       <td className="px-4 py-4 font-mono text-sm font-bold tabular-nums text-white">
                         {report.periodTotalDelivered.toLocaleString()}
                       </td>
