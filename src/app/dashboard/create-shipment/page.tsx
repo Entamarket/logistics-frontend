@@ -6,8 +6,12 @@ import {
   createShipment,
   dimensionCategoryLabel,
   estimateShipmentPrice,
+  initializeShipmentPayment,
+  verifyShipmentPayment,
+  type ShipmentPaymentInit,
   type ShipmentPriceEstimate,
 } from "@/lib/shipment-api";
+import { openPaystackPayment } from "@/lib/paystack-inline";
 import { COUNTRY_OPTIONS, DEFAULT_COUNTRY_CODE, NIGERIA_STATES } from "@/lib/location-data";
 import {
   ClientCostHighlight,
@@ -90,7 +94,75 @@ export default function CreateShipmentPage() {
   const [priceEstimate, setPriceEstimate] = useState<ShipmentPriceEstimate | null>(null);
   const [calculatorMessage, setCalculatorMessage] = useState("");
   const [calculating, setCalculating] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [pendingPaymentShipmentId, setPendingPaymentShipmentId] = useState<string | null>(null);
   const estimateRequestId = useRef(0);
+
+  function resetFormAfterPayment() {
+    setDeliveryType("instant");
+    setPickupDate("");
+    setPickupWindowStart("");
+    setPriceEstimate(null);
+    setCalculatorMessage("");
+    setSender({ fullName: "", address: "", phone: "", country: DEFAULT_COUNTRY_CODE, state: "" });
+    setRecipient({ fullName: "", address: "", phone: "", country: DEFAULT_COUNTRY_CODE, state: "" });
+    setPkg({ type: "", weight: "", lengthCm: "", widthCm: "", heightCm: "", quantity: "", note: "" });
+  }
+
+  function paymentErrorMessage(error: unknown, fallback: string): string {
+    return error instanceof Error ? error.message : fallback;
+  }
+
+  async function runPaymentFlow(
+    shipmentId: string,
+    options?: { resetFormOnSuccess?: boolean; incompletePaymentMessage?: string }
+  ) {
+    const initRes = await initializeShipmentPayment(shipmentId);
+    if (!initRes.success || !initRes.data) {
+      throw new Error(initRes.message || "Could not start payment.");
+    }
+
+    const init: ShipmentPaymentInit = initRes.data;
+    if (init.alreadyPaid) {
+      setPendingPaymentShipmentId(null);
+      setPaying(false);
+      setSuccess("Payment was already completed. Your shipment is confirmed.");
+      if (options?.resetFormOnSuccess) {
+        resetFormAfterPayment();
+      }
+      router.push("/dashboard/active");
+      return;
+    }
+
+    await openPaystackPayment({
+      accessCode: init.accessCode,
+      publicKey: init.publicKey,
+      email: init.email,
+      amountKobo: init.amountKobo,
+      reference: init.reference,
+      onSuccess: async (paidReference) => {
+        setPaying(true);
+        const verifyRes = await verifyShipmentPayment(shipmentId, paidReference || init.reference);
+        setPaying(false);
+        if (verifyRes.success) {
+          setPendingPaymentShipmentId(null);
+          setSuccess("Payment successful. Your shipment is confirmed.");
+          if (options?.resetFormOnSuccess) {
+            resetFormAfterPayment();
+          }
+          router.push("/dashboard/active");
+          return;
+        }
+        setError(verifyRes.message || "Payment verification failed.");
+      },
+      onClose: () => {
+        setPaying(false);
+        if (options?.incompletePaymentMessage) {
+          setError(options.incompletePaymentMessage);
+        }
+      },
+    });
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -215,26 +287,46 @@ export default function CreateShipmentPage() {
       payload.recipientLatitude = parseFloat(recLatS);
     }
     const res = await createShipment(payload);
+    if (!res.success) {
+      setLoading(false);
+      if (res.message?.toLowerCase().includes("auth") || res.message?.toLowerCase().includes("token")) {
+        router.replace("/auth/login");
+        return;
+      }
+      setError(res.message);
+      return;
+    }
+
+    const shipmentId = res.data._id;
+    setPendingPaymentShipmentId(shipmentId);
     setLoading(false);
+    setPaying(true);
+    setSuccess("Complete payment to confirm your shipment.");
 
-    if (res.success) {
-      setSuccess("Shipment created successfully.");
-      setDeliveryType("instant");
-      setPickupDate("");
-      setPickupWindowStart("");
-      setPriceEstimate(null);
-      setCalculatorMessage("");
-      setSender({ fullName: "", address: "", phone: "", country: DEFAULT_COUNTRY_CODE, state: "" });
-      setRecipient({ fullName: "", address: "", phone: "", country: DEFAULT_COUNTRY_CODE, state: "" });
-      setPkg({ type: "", weight: "", lengthCm: "", widthCm: "", heightCm: "", quantity: "", note: "" });
-      return;
+    try {
+      await runPaymentFlow(shipmentId, {
+        resetFormOnSuccess: true,
+        incompletePaymentMessage:
+          "Payment was not completed. Use Retry payment below when you are ready.",
+      });
+    } catch (error) {
+      setPaying(false);
+      setError(
+        paymentErrorMessage(error, "Could not open payment. Try again with Retry payment.")
+      );
     }
+  }
 
-    if (res.message?.toLowerCase().includes("auth") || res.message?.toLowerCase().includes("token")) {
-      router.replace("/auth/login");
-      return;
+  async function handleRetryPayment() {
+    if (!pendingPaymentShipmentId) return;
+    setError("");
+    setPaying(true);
+    try {
+      await runPaymentFlow(pendingPaymentShipmentId);
+    } catch (error) {
+      setPaying(false);
+      setError(paymentErrorMessage(error, "Could not open payment."));
     }
-    setError(res.message);
   }
 
   function handleUsePickupLocation() {
@@ -900,8 +992,18 @@ export default function CreateShipmentPage() {
           )}
         </ClientSection>
 
-        <button type="submit" disabled={loading} className={`${clientBtnPrimary} w-full`}>
-          {loading ? "Creating…" : "Create shipment"}
+        {pendingPaymentShipmentId ? (
+          <button
+            type="button"
+            onClick={() => void handleRetryPayment()}
+            disabled={paying}
+            className={`${clientBtnSecondary} w-full`}
+          >
+            {paying ? "Processing payment…" : "Retry payment"}
+          </button>
+        ) : null}
+        <button type="submit" disabled={loading || paying} className={`${clientBtnPrimary} w-full`}>
+          {loading ? "Creating…" : paying ? "Awaiting payment…" : "Create shipment & pay"}
         </button>
       </form>
     </ClientShell>

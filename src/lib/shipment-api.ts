@@ -131,8 +131,25 @@ export async function estimateShipmentPrice(payload: EstimateShipmentPricePayloa
   return apiPost<ShipmentPriceEstimate>("/api/shipments/estimate-price", payload);
 }
 
+export interface ShipmentPaymentInit {
+  accessCode: string;
+  reference: string;
+  amountKobo: number;
+  publicKey: string;
+  email: string;
+  alreadyPaid?: boolean;
+}
+
 export async function createShipment(payload: CreateShipmentPayload) {
   return apiPost<ShipmentData>("/api/shipments", payload);
+}
+
+export async function initializeShipmentPayment(shipmentId: string) {
+  return apiPost<ShipmentPaymentInit>(`/api/shipments/${shipmentId}/payment/initialize`, {});
+}
+
+export async function verifyShipmentPayment(shipmentId: string, reference: string) {
+  return apiPost<ShipmentData>(`/api/shipments/${shipmentId}/payment/verify`, { reference });
 }
 
 export async function markShipmentDelivered(shipmentId: string) {
