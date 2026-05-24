@@ -4,6 +4,8 @@
   --background: #ffffff;
   --foreground: #171717;
   --brand: #81007f;
+  --brand-dark: #6a0068;
+  --brand-light: #9d33a0;
   --brand-foreground: #ffffff;
 }
 
@@ -11,22 +13,18 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-light: var(--brand-light);
   --color-brand-foreground: var(--brand-foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-plus-jakarta), system-ui, sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
 /* Mobile: base padding + respect notches and home indicator */
@@ -37,7 +35,186 @@ body {
   padding-bottom: max(1rem, env(safe-area-inset-bottom, 0));
 }
 
-/* Remove tap highlight on touch devices */
 .tap-highlight-none {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* ——— Landing page animations ——— */
+
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-14px) rotate(1.5deg);
+  }
+}
+
+@keyframes landing-float-delayed {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(-1deg);
+  }
+}
+
+@keyframes landing-pulse-glow {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes landing-gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes landing-route-dash {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes landing-truck-move {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+
+@keyframes landing-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes landing-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+@keyframes landing-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.landing-animate-float {
+  animation: landing-float 5.5s ease-in-out infinite;
+}
+
+.landing-animate-float-delayed {
+  animation: landing-float-delayed 6.2s ease-in-out infinite;
+  animation-delay: 0.8s;
+}
+
+.landing-animate-glow {
+  animation: landing-pulse-glow 4s ease-in-out infinite;
+}
+
+.landing-animate-gradient {
+  background-size: 200% 200%;
+  animation: landing-gradient-shift 12s ease infinite;
+}
+
+.landing-animate-fade-up {
+  animation: landing-fade-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.landing-animate-fade-up-delay-1 {
+  animation: landing-fade-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.12s forwards;
+  opacity: 0;
+}
+
+.landing-animate-fade-up-delay-2 {
+  animation: landing-fade-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.24s forwards;
+  opacity: 0;
+}
+
+.landing-animate-fade-up-delay-3 {
+  animation: landing-fade-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.36s forwards;
+  opacity: 0;
+}
+
+.landing-route-line {
+  stroke-dasharray: 320;
+  stroke-dashoffset: 320;
+  animation: landing-route-dash 2.4s cubic-bezier(0.4, 0, 0.2, 1) 0.6s forwards;
+}
+
+.landing-marquee-track {
+  animation: landing-marquee 28s linear infinite;
+}
+
+.landing-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.landing-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-animate-float,
+  .landing-animate-float-delayed,
+  .landing-animate-glow,
+  .landing-animate-gradient,
+  .landing-animate-fade-up,
+  .landing-animate-fade-up-delay-1,
+  .landing-animate-fade-up-delay-2,
+  .landing-animate-fade-up-delay-3,
+  .landing-route-line,
+  .landing-marquee-track {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .landing-reveal {
+    opacity: 1;
+    transform: none;
+  }
 }
