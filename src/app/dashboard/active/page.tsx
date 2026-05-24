@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getShipments, type ShipmentData } from "@/lib/shipment-api";
+import { formatContactLocation } from "@/lib/location-data";
 import { ClientActiveShipmentMap } from "@/components/maps/ClientActiveShipmentMap";
 
 const TERMINAL_STATUSES = new Set(["delivered", "cancelled"]);
@@ -220,14 +221,18 @@ export default function ActiveShipmentPage() {
                       <LocationPinIcon className="h-3.5 w-3.5 shrink-0" />
                       Pickup
                     </p>
-                    <p className="mt-2 text-sm leading-relaxed text-neutral-700">{s.senderDetails.address}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-neutral-700">
+                      {formatContactLocation(s.senderDetails)}
+                    </p>
                   </div>
                   <div className="rounded-xl border border-sky-100/90 bg-gradient-to-br from-sky-50/90 to-blue-50/40 p-3.5 shadow-sm">
                     <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-sky-800">
                       <LocationPinIcon className="h-3.5 w-3.5 shrink-0" />
                       Drop-off
                     </p>
-                    <p className="mt-2 text-sm leading-relaxed text-neutral-700">{s.recipientDetails.address}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-neutral-700">
+                      {formatContactLocation(s.recipientDetails)}
+                    </p>
                   </div>
                 </div>
               </div>

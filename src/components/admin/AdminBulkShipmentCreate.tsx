@@ -14,6 +14,7 @@ import {
   type AdminBulkShipmentItemPayload,
   type AdminBulkShipmentResult,
 } from "@/lib/admin-api";
+import { NIGERIA_STATES } from "@/lib/location-data";
 
 const MAX_ROWS = 20;
 const inputClass =
@@ -45,9 +46,17 @@ function newRowId(): string {
 interface ShipmentRow {
   localId: string;
   deliveryType: "instant" | "scheduled";
-  sender: { fullName: string; address: string; phone: string };
-  recipient: { fullName: string; address: string; phone: string };
-  pkg: { type: string; weight: string; dimensions: string; quantity: string; note: string };
+  sender: { fullName: string; address: string; phone: string; country: string; state: string };
+  recipient: { fullName: string; address: string; phone: string; country: string; state: string };
+  pkg: {
+    type: string;
+    weight: string;
+    lengthCm: string;
+    widthCm: string;
+    heightCm: string;
+    quantity: string;
+    note: string;
+  };
   pickupLongitude: string;
   pickupLatitude: string;
   pickupDate: string;
@@ -59,9 +68,9 @@ function emptyRow(): ShipmentRow {
   return {
     localId: newRowId(),
     deliveryType: "instant",
-    sender: { fullName: "", address: "", phone: "" },
-    recipient: { fullName: "", address: "", phone: "" },
-    pkg: { type: "", weight: "", dimensions: "", quantity: "1", note: "" },
+    sender: { fullName: "", address: "", phone: "", country: "NG", state: "" },
+    recipient: { fullName: "", address: "", phone: "", country: "NG", state: "" },
+    pkg: { type: "", weight: "", lengthCm: "", widthCm: "", heightCm: "", quantity: "1", note: "" },
     pickupLongitude: "",
     pickupLatitude: "",
     pickupDate: "",
@@ -74,17 +83,36 @@ function validateRow(row: ShipmentRow, rowNum: number): string | null {
   if (!row.sender.fullName.trim() || !row.sender.address.trim() || !row.sender.phone.trim()) {
     return `Shipment ${rowNum}: sender details are required.`;
   }
+  if (!row.sender.state.trim()) {
+    return `Shipment ${rowNum}: sender state is required.`;
+  }
   if (!row.recipient.fullName.trim() || !row.recipient.address.trim() || !row.recipient.phone.trim()) {
     return `Shipment ${rowNum}: recipient details are required.`;
+  }
+  if (!row.recipient.state.trim()) {
+    return `Shipment ${rowNum}: recipient state is required.`;
   }
   if (!row.pkg.type.trim()) {
     return `Shipment ${rowNum}: package type is required.`;
   }
   const weight = parseFloat(row.pkg.weight);
-  const dimensions = parseFloat(row.pkg.dimensions);
+  const lengthCm = parseFloat(row.pkg.lengthCm);
+  const widthCm = parseFloat(row.pkg.widthCm);
+  const heightCm = parseFloat(row.pkg.heightCm);
   const quantity = parseInt(row.pkg.quantity, 10);
-  if (isNaN(weight) || weight < 0 || isNaN(dimensions) || dimensions < 0 || isNaN(quantity) || quantity < 1) {
-    return `Shipment ${rowNum}: enter valid weight, dimensions, and quantity.`;
+  if (
+    isNaN(weight) ||
+    weight < 0 ||
+    isNaN(lengthCm) ||
+    lengthCm < 0 ||
+    isNaN(widthCm) ||
+    widthCm < 0 ||
+    isNaN(heightCm) ||
+    heightCm < 0 ||
+    isNaN(quantity) ||
+    quantity < 1
+  ) {
+    return `Shipment ${rowNum}: enter valid weight, length/width/height (cm), and quantity.`;
   }
   if (row.deliveryType === "instant") {
     const lng = parseFloat(row.pickupLongitude);
@@ -119,7 +147,9 @@ function validateRow(row: ShipmentRow, rowNum: number): string | null {
 
 function rowToPayload(row: ShipmentRow): AdminBulkShipmentItemPayload {
   const weight = parseFloat(row.pkg.weight);
-  const dimensions = parseFloat(row.pkg.dimensions);
+  const lengthCm = parseFloat(row.pkg.lengthCm);
+  const widthCm = parseFloat(row.pkg.widthCm);
+  const heightCm = parseFloat(row.pkg.heightCm);
   const quantity = parseInt(row.pkg.quantity, 10);
   const payload: AdminBulkShipmentItemPayload = {
     deliveryType: row.deliveryType,
@@ -127,16 +157,22 @@ function rowToPayload(row: ShipmentRow): AdminBulkShipmentItemPayload {
       fullName: row.sender.fullName.trim(),
       address: row.sender.address.trim(),
       phone: row.sender.phone.trim(),
+      country: row.sender.country || "NG",
+      state: row.sender.state.trim(),
     },
     recipientDetails: {
       fullName: row.recipient.fullName.trim(),
       address: row.recipient.address.trim(),
       phone: row.recipient.phone.trim(),
+      country: row.recipient.country || "NG",
+      state: row.recipient.state.trim(),
     },
     packageDetails: {
       type: row.pkg.type.trim(),
       weight,
-      dimensions,
+      lengthCm,
+      widthCm,
+      heightCm,
       quantity,
       note: row.pkg.note.trim() || undefined,
     },
@@ -437,15 +473,22 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
                 required
                 className={inputClass}
               />
-              <input
-                placeholder="Address"
-                value={row.sender.address}
+              <select
+                value={row.sender.state}
                 onChange={(e) =>
-                  updateRow(row.localId, { sender: { ...row.sender, address: e.target.value } })
+                  updateRow(row.localId, { sender: { ...row.sender, state: e.target.value } })
                 }
                 required
-                className={`${inputClass} sm:col-span-2`}
-              />
+                className={inputClass}
+                aria-label="Sender state"
+              >
+                <option value="">State</option>
+                {NIGERIA_STATES.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
+                  </option>
+                ))}
+              </select>
               <input
                 placeholder="Phone"
                 value={row.sender.phone}
@@ -455,6 +498,16 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
                 required
                 className={inputClass}
               />
+              <input
+                placeholder="Address (street, area)"
+                value={row.sender.address}
+                onChange={(e) =>
+                  updateRow(row.localId, { sender: { ...row.sender, address: e.target.value } })
+                }
+                required
+                className={`${inputClass} sm:col-span-3`}
+              />
+              <p className={`sm:col-span-3 text-xs text-white/40`}>Country: Nigeria (NG)</p>
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -468,15 +521,22 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
                 required
                 className={inputClass}
               />
-              <input
-                placeholder="Address"
-                value={row.recipient.address}
+              <select
+                value={row.recipient.state}
                 onChange={(e) =>
-                  updateRow(row.localId, { recipient: { ...row.recipient, address: e.target.value } })
+                  updateRow(row.localId, { recipient: { ...row.recipient, state: e.target.value } })
                 }
                 required
-                className={`${inputClass} sm:col-span-2`}
-              />
+                className={inputClass}
+                aria-label="Recipient state"
+              >
+                <option value="">State</option>
+                {NIGERIA_STATES.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
+                  </option>
+                ))}
+              </select>
               <input
                 placeholder="Phone"
                 value={row.recipient.phone}
@@ -486,6 +546,16 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
                 required
                 className={inputClass}
               />
+              <input
+                placeholder="Address (street, area)"
+                value={row.recipient.address}
+                onChange={(e) =>
+                  updateRow(row.localId, { recipient: { ...row.recipient, address: e.target.value } })
+                }
+                required
+                className={`${inputClass} sm:col-span-3`}
+              />
+              <p className={`sm:col-span-3 text-xs text-white/40`}>Country: Nigeria (NG)</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -508,11 +578,29 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
                 className={inputClass}
               />
               <input
-                placeholder="Dimensions"
+                placeholder="L (cm)"
                 type="number"
                 min={0}
-                value={row.pkg.dimensions}
-                onChange={(e) => updateRow(row.localId, { pkg: { ...row.pkg, dimensions: e.target.value } })}
+                value={row.pkg.lengthCm}
+                onChange={(e) => updateRow(row.localId, { pkg: { ...row.pkg, lengthCm: e.target.value } })}
+                required
+                className={inputClass}
+              />
+              <input
+                placeholder="W (cm)"
+                type="number"
+                min={0}
+                value={row.pkg.widthCm}
+                onChange={(e) => updateRow(row.localId, { pkg: { ...row.pkg, widthCm: e.target.value } })}
+                required
+                className={inputClass}
+              />
+              <input
+                placeholder="H (cm)"
+                type="number"
+                min={0}
+                value={row.pkg.heightCm}
+                onChange={(e) => updateRow(row.localId, { pkg: { ...row.pkg, heightCm: e.target.value } })}
                 required
                 className={inputClass}
               />

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getShipments, type ShipmentData } from "@/lib/shipment-api";
+import { formatContactLocation } from "@/lib/location-data";
 import { createFeedback, getMyFeedback, type FeedbackData } from "@/lib/feedback-api";
 
 function statusClass(status: string): string {
@@ -245,11 +246,15 @@ export default function ShipmentHistoryPage() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50/90 to-orange-50/30 p-3 shadow-[0_0_16px_rgba(245,158,11,0.1)]">
                     <p className="text-xs font-bold uppercase tracking-wide text-amber-800">Pickup</p>
-                    <p className="mt-1.5 text-sm leading-relaxed text-neutral-700">{s.senderDetails.address}</p>
+                    <p className="mt-1.5 text-sm leading-relaxed text-neutral-700">
+                      {formatContactLocation(s.senderDetails)}
+                    </p>
                   </div>
                   <div className="rounded-xl border border-sky-200/80 bg-gradient-to-br from-sky-50/90 to-blue-50/30 p-3 shadow-[0_0_16px_rgba(14,165,233,0.1)]">
                     <p className="text-xs font-bold uppercase tracking-wide text-sky-800">Drop-off</p>
-                    <p className="mt-1.5 text-sm leading-relaxed text-neutral-700">{s.recipientDetails.address}</p>
+                    <p className="mt-1.5 text-sm leading-relaxed text-neutral-700">
+                      {formatContactLocation(s.recipientDetails)}
+                    </p>
                   </div>
                 </div>
 

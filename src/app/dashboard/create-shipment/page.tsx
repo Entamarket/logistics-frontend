@@ -1,8 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { createShipment } from "@/lib/shipment-api";
+import {
+  createShipment,
+  dimensionCategoryLabel,
+  estimateShipmentPrice,
+  type ShipmentPriceEstimate,
+} from "@/lib/shipment-api";
+import { COUNTRY_OPTIONS, DEFAULT_COUNTRY_CODE, NIGERIA_STATES } from "@/lib/location-data";
 import {
   ClientCostHighlight,
   ClientPageHeader,
@@ -53,26 +59,70 @@ export default function CreateShipmentPage() {
   const [deliveryType, setDeliveryType] = useState<"instant" | "scheduled">("instant");
   const [pickupDate, setPickupDate] = useState("");
   const [pickupWindowStart, setPickupWindowStart] = useState("");
-  const [sender, setSender] = useState({ fullName: "", address: "", phone: "" });
-  const [recipient, setRecipient] = useState({ fullName: "", address: "", phone: "" });
-  const [pkg, setPkg] = useState({ type: "", weight: "", dimensions: "", quantity: "", note: "" });
+  const [sender, setSender] = useState({
+    fullName: "",
+    address: "",
+    phone: "",
+    country: DEFAULT_COUNTRY_CODE,
+    state: "",
+  });
+  const [recipient, setRecipient] = useState({
+    fullName: "",
+    address: "",
+    phone: "",
+    country: DEFAULT_COUNTRY_CODE,
+    state: "",
+  });
+  const [pkg, setPkg] = useState({
+    type: "",
+    weight: "",
+    lengthCm: "",
+    widthCm: "",
+    heightCm: "",
+    quantity: "",
+    note: "",
+  });
   const [pickupLongitude, setPickupLongitude] = useState("");
   const [pickupLatitude, setPickupLatitude] = useState("");
   const [recipientLongitude, setRecipientLongitude] = useState("");
   const [recipientLatitude, setRecipientLatitude] = useState("");
   const [geoLoading, setGeoLoading] = useState(false);
-  const [estimatedCost, setEstimatedCost] = useState<number | null>(null);
+  const [priceEstimate, setPriceEstimate] = useState<ShipmentPriceEstimate | null>(null);
   const [calculatorMessage, setCalculatorMessage] = useState("");
+  const [calculating, setCalculating] = useState(false);
+  const estimateRequestId = useRef(0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setSuccess("");
     const weight = parseFloat(pkg.weight);
-    const dimensions = parseFloat(pkg.dimensions);
+    const lengthCm = parseFloat(pkg.lengthCm);
+    const widthCm = parseFloat(pkg.widthCm);
+    const heightCm = parseFloat(pkg.heightCm);
     const quantity = parseInt(pkg.quantity, 10);
-    if (isNaN(weight) || weight < 0 || isNaN(dimensions) || dimensions < 0 || isNaN(quantity) || quantity < 1) {
-      setError("Please enter valid weight, dimensions, and quantity.");
+    if (
+      isNaN(weight) ||
+      weight < 0 ||
+      isNaN(lengthCm) ||
+      lengthCm < 0 ||
+      isNaN(widthCm) ||
+      widthCm < 0 ||
+      isNaN(heightCm) ||
+      heightCm < 0 ||
+      isNaN(quantity) ||
+      quantity < 1
+    ) {
+      setError("Please enter valid weight, length, width, height (cm), and quantity.");
+      return;
+    }
+
+    if (!sender.state.trim()) {
+      setError("Please select the sender's state.");
+      return;
+    }
+    if (!recipient.state.trim()) {
+      setError("Please select the recipient's state.");
       return;
     }
 
@@ -141,7 +191,9 @@ export default function CreateShipmentPage() {
       packageDetails: {
         type: pkg.type,
         weight,
-        dimensions,
+        lengthCm,
+        widthCm,
+        heightCm,
         quantity,
         note: pkg.note || undefined,
       },
@@ -170,11 +222,11 @@ export default function CreateShipmentPage() {
       setDeliveryType("instant");
       setPickupDate("");
       setPickupWindowStart("");
-      setEstimatedCost(null);
+      setPriceEstimate(null);
       setCalculatorMessage("");
-      setSender({ fullName: "", address: "", phone: "" });
-      setRecipient({ fullName: "", address: "", phone: "" });
-      setPkg({ type: "", weight: "", dimensions: "", quantity: "", note: "" });
+      setSender({ fullName: "", address: "", phone: "", country: DEFAULT_COUNTRY_CODE, state: "" });
+      setRecipient({ fullName: "", address: "", phone: "", country: DEFAULT_COUNTRY_CODE, state: "" });
+      setPkg({ type: "", weight: "", lengthCm: "", widthCm: "", heightCm: "", quantity: "", note: "" });
       return;
     }
 
@@ -206,9 +258,14 @@ export default function CreateShipmentPage() {
     );
   }
 
-  function handleCalculateCost() {
+  const canEstimatePrice =
+    Boolean(sender.state.trim() && sender.address.trim()) &&
+    Boolean(recipient.state.trim() && recipient.address.trim());
+
+  const runPriceEstimate = useCallback(async () => {
     setCalculatorMessage("");
-    setEstimatedCost(null);
+    setPriceEstimate(null);
+
     const w = pkg.weight.trim();
     if (!w) {
       setCalculatorMessage("Please enter weight in the package details above.");
@@ -219,8 +276,106 @@ export default function CreateShipmentPage() {
       setCalculatorMessage("Please enter a valid weight in the package details above.");
       return;
     }
-    setEstimatedCost(Math.round(weight * 500));
-  }
+    const lengthCm = parseFloat(pkg.lengthCm);
+    const widthCm = parseFloat(pkg.widthCm);
+    const heightCm = parseFloat(pkg.heightCm);
+    if (
+      isNaN(lengthCm) ||
+      lengthCm < 0 ||
+      isNaN(widthCm) ||
+      widthCm < 0 ||
+      isNaN(heightCm) ||
+      heightCm < 0
+    ) {
+      setCalculatorMessage("Please enter valid length, width, and height (cm) in the package details above.");
+      return;
+    }
+    if (!sender.state.trim() || !sender.address.trim()) {
+      setCalculatorMessage("Complete sender state and address to estimate price.");
+      return;
+    }
+    if (!recipient.state.trim() || !recipient.address.trim()) {
+      setCalculatorMessage("Complete recipient state and address to estimate price.");
+      return;
+    }
+
+    const requestId = ++estimateRequestId.current;
+    setCalculating(true);
+    try {
+      const res = await estimateShipmentPrice({
+        senderDetails: {
+          fullName: sender.fullName.trim() || "Sender",
+          address: sender.address.trim(),
+          phone: sender.phone.trim() || "0000000000",
+          country: sender.country,
+          state: sender.state.trim(),
+        },
+        recipientDetails: {
+          fullName: recipient.fullName.trim() || "Recipient",
+          address: recipient.address.trim(),
+          phone: recipient.phone.trim() || "0000000000",
+          country: recipient.country,
+          state: recipient.state.trim(),
+        },
+        weight,
+        lengthCm,
+        widthCm,
+        heightCm,
+      });
+      if (requestId !== estimateRequestId.current) return;
+      if (res.success && res.data) {
+        setPriceEstimate(res.data);
+      } else {
+        setCalculatorMessage(res.message || "Could not estimate price.");
+      }
+    } catch {
+      if (requestId !== estimateRequestId.current) return;
+      setCalculatorMessage("Could not estimate price. Check addresses and try again.");
+    } finally {
+      if (requestId === estimateRequestId.current) {
+        setCalculating(false);
+      }
+    }
+  }, [pkg.weight, pkg.lengthCm, pkg.widthCm, pkg.heightCm, sender, recipient]);
+
+  const hasValidDimensionsForEstimate =
+    pkg.lengthCm.trim() !== "" &&
+    pkg.widthCm.trim() !== "" &&
+    pkg.heightCm.trim() !== "" &&
+    !isNaN(parseFloat(pkg.lengthCm)) &&
+    !isNaN(parseFloat(pkg.widthCm)) &&
+    !isNaN(parseFloat(pkg.heightCm)) &&
+    parseFloat(pkg.lengthCm) >= 0 &&
+    parseFloat(pkg.widthCm) >= 0 &&
+    parseFloat(pkg.heightCm) >= 0;
+
+  useEffect(() => {
+    if (!canEstimatePrice || !pkg.weight.trim() || !hasValidDimensionsForEstimate) {
+      setPriceEstimate(null);
+      return;
+    }
+    const weight = parseFloat(pkg.weight);
+    if (isNaN(weight) || weight < 0) return;
+
+    const timer = setTimeout(() => {
+      void runPriceEstimate();
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [
+    sender.state,
+    sender.address,
+    sender.country,
+    recipient.state,
+    recipient.address,
+    recipient.country,
+    pkg.weight,
+    pkg.lengthCm,
+    pkg.widthCm,
+    pkg.heightCm,
+    canEstimatePrice,
+    hasValidDimensionsForEstimate,
+    runPriceEstimate,
+  ]);
 
   useEffect(() => {
     if (!success && !error) return;
@@ -265,6 +420,45 @@ export default function CreateShipmentPage() {
                 placeholder="John Doe"
               />
             </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="sender-country" className={clientLabelClass}>
+                  Country
+                </label>
+                <select
+                  id="sender-country"
+                  value={sender.country}
+                  disabled
+                  className={`${clientInputClass} cursor-not-allowed opacity-90`}
+                  aria-readonly="true"
+                >
+                  {COUNTRY_OPTIONS.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="sender-state" className={clientLabelClass}>
+                  State
+                </label>
+                <select
+                  id="sender-state"
+                  required
+                  value={sender.state}
+                  onChange={(e) => setSender((s) => ({ ...s, state: e.target.value }))}
+                  className={clientInputClass}
+                >
+                  <option value="">Select state</option>
+                  {NIGERIA_STATES.map((st) => (
+                    <option key={st} value={st}>
+                      {st}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <div>
               <label htmlFor="sender-address" className={clientLabelClass}>
                 Address
@@ -276,7 +470,7 @@ export default function CreateShipmentPage() {
                 value={sender.address}
                 onChange={(e) => setSender((s) => ({ ...s, address: e.target.value }))}
                 className={clientInputClass}
-                placeholder="Street, city, state"
+                placeholder="Street, area, landmark"
               />
             </div>
             <div>
@@ -316,6 +510,45 @@ export default function CreateShipmentPage() {
                 placeholder="Jane Doe"
               />
             </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="recipient-country" className={clientLabelClass}>
+                  Country
+                </label>
+                <select
+                  id="recipient-country"
+                  value={recipient.country}
+                  disabled
+                  className={`${clientInputClass} cursor-not-allowed opacity-90`}
+                  aria-readonly="true"
+                >
+                  {COUNTRY_OPTIONS.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="recipient-state" className={clientLabelClass}>
+                  State
+                </label>
+                <select
+                  id="recipient-state"
+                  required
+                  value={recipient.state}
+                  onChange={(e) => setRecipient((r) => ({ ...r, state: e.target.value }))}
+                  className={clientInputClass}
+                >
+                  <option value="">Select state</option>
+                  {NIGERIA_STATES.map((st) => (
+                    <option key={st} value={st}>
+                      {st}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <div>
               <label htmlFor="recipient-address" className={clientLabelClass}>
                 Address
@@ -327,7 +560,7 @@ export default function CreateShipmentPage() {
                 value={recipient.address}
                 onChange={(e) => setRecipient((r) => ({ ...r, address: e.target.value }))}
                 className={clientInputClass}
-                placeholder="Street, city, state"
+                placeholder="Street, area, landmark"
               />
             </div>
             <div>
@@ -409,21 +642,61 @@ export default function CreateShipmentPage() {
                 placeholder="0"
               />
             </div>
-            <div>
-              <label htmlFor="pkg-dimensions" className={clientLabelClass}>
-                Dimensions
-              </label>
-              <input
-                id="pkg-dimensions"
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                value={pkg.dimensions}
-                onChange={(e) => setPkg((p) => ({ ...p, dimensions: e.target.value }))}
-                className={clientInputClass}
-                placeholder="0"
-              />
+            <div className="sm:col-span-2">
+              <p className={clientLabelClass}>Dimensions (cm) — volume = L × W × H</p>
+              <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div>
+                  <label htmlFor="pkg-lengthCm" className="sr-only">
+                    Length (cm)
+                  </label>
+                  <input
+                    id="pkg-lengthCm"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    value={pkg.lengthCm}
+                    onChange={(e) => setPkg((p) => ({ ...p, lengthCm: e.target.value }))}
+                    className={clientInputClass}
+                    placeholder="Length (cm)"
+                    aria-label="Length in centimeters"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="pkg-widthCm" className="sr-only">
+                    Width (cm)
+                  </label>
+                  <input
+                    id="pkg-widthCm"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    value={pkg.widthCm}
+                    onChange={(e) => setPkg((p) => ({ ...p, widthCm: e.target.value }))}
+                    className={clientInputClass}
+                    placeholder="Width (cm)"
+                    aria-label="Width in centimeters"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="pkg-heightCm" className="sr-only">
+                    Height (cm)
+                  </label>
+                  <input
+                    id="pkg-heightCm"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    value={pkg.heightCm}
+                    onChange={(e) => setPkg((p) => ({ ...p, heightCm: e.target.value }))}
+                    className={clientInputClass}
+                    placeholder="Height (cm)"
+                    aria-label="Height in centimeters"
+                  />
+                </div>
+              </div>
             </div>
             <div>
               <label htmlFor="pkg-quantity" className={clientLabelClass}>
@@ -458,19 +731,56 @@ export default function CreateShipmentPage() {
 
         <ClientSection
           title="Price calculator"
-          description="₦500 per kg, rounded to the nearest whole number. Enter weight above, then calculate."
+          description="₦1,500 base + ₦150/km + weight tier + volume tier (≤20k cm³ free; up to 80k ₦500; up to 200k ₦1,000; over 200k ₦1,500). Updates when addresses, weight, or L×W×H change."
           accent="amber"
         >
-          <div className="flex flex-col flex-wrap gap-3 sm:flex-row sm:items-center">
-            <button type="button" onClick={handleCalculateCost} className={clientBtnSecondary}>
-              Calculate cost
-            </button>
-            {calculatorMessage ? (
-              <p className="text-sm text-amber-800" role="status">
-                {calculatorMessage}
-              </p>
+          <div className="space-y-3">
+            <div className="flex flex-col flex-wrap gap-3 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                onClick={() => void runPriceEstimate()}
+                disabled={calculating}
+                className={clientBtnSecondary}
+              >
+                {calculating ? "Calculating…" : "Calculate cost"}
+              </button>
+              {calculatorMessage ? (
+                <p className="text-sm text-amber-800" role="status">
+                  {calculatorMessage}
+                </p>
+              ) : null}
+              {priceEstimate !== null ? <ClientCostHighlight amount={priceEstimate.total} /> : null}
+            </div>
+            {priceEstimate !== null ? (
+              <div className={`${clientInsetPanel} space-y-1.5 text-sm text-neutral-700`}>
+                <p className="flex justify-between gap-4">
+                  <span>Base fee</span>
+                  <span className="font-medium tabular-nums">₦{priceEstimate.baseFee.toLocaleString()}</span>
+                </p>
+                <p className="flex justify-between gap-4">
+                  <span>
+                    Distance ({priceEstimate.distanceKm} km
+                    {priceEstimate.distanceKm < 1 ? ", under 1 km — no distance charge" : ""})
+                  </span>
+                  <span className="font-medium tabular-nums">₦{priceEstimate.distanceFee.toLocaleString()}</span>
+                </p>
+                <p className="flex justify-between gap-4">
+                  <span>Weight tier</span>
+                  <span className="font-medium tabular-nums">₦{priceEstimate.weightFee.toLocaleString()}</span>
+                </p>
+                <p className="flex justify-between gap-4">
+                  <span>
+                    Size ({dimensionCategoryLabel(priceEstimate.dimensionCategory)} ·{" "}
+                    {priceEstimate.volumeCm3.toLocaleString()} cm³)
+                  </span>
+                  <span className="font-medium tabular-nums">₦{priceEstimate.dimensionFee.toLocaleString()}</span>
+                </p>
+                <p className="flex justify-between gap-4 border-t border-neutral-200/80 pt-1.5 font-semibold text-neutral-900">
+                  <span>Total</span>
+                  <span className="tabular-nums">₦{priceEstimate.total.toLocaleString()}</span>
+                </p>
+              </div>
             ) : null}
-            {estimatedCost !== null ? <ClientCostHighlight amount={estimatedCost} /> : null}
           </div>
         </ClientSection>
 

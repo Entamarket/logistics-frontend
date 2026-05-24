@@ -1,5 +1,13 @@
 import { apiGet, apiPatch, apiPost } from "./api";
 
+export interface ContactDetailsPayload {
+  fullName: string;
+  address: string;
+  phone: string;
+  country: string;
+  state: string;
+}
+
 export interface CreateShipmentPayload {
   deliveryType: "instant" | "scheduled";
   pickupWindowStart?: string;
@@ -10,12 +18,14 @@ export interface CreateShipmentPayload {
   /** Optional drop-off coordinates for maps (both or neither). */
   recipientLongitude?: number;
   recipientLatitude?: number;
-  senderDetails: { fullName: string; address: string; phone: string };
-  recipientDetails: { fullName: string; address: string; phone: string };
+  senderDetails: ContactDetailsPayload;
+  recipientDetails: ContactDetailsPayload;
   packageDetails: {
     type: string;
     weight: number;
-    dimensions: number;
+    lengthCm: number;
+    widthCm: number;
+    heightCm: number;
     quantity: number;
     note?: string;
   };
@@ -39,9 +49,23 @@ export interface ShipmentData {
   price: number;
   paymentStatus: string;
   timeline: { status: string; timestamp: string }[];
-  senderDetails: { fullName: string; address: string; phone: string };
-  recipientDetails: { fullName: string; address: string; phone: string };
-  packageDetails: { type: string; weight: number; dimensions: number; quantity: number; note?: string };
+  senderDetails: Omit<ContactDetailsPayload, "country" | "state"> & {
+    country?: string;
+    state?: string;
+  };
+  recipientDetails: Omit<ContactDetailsPayload, "country" | "state"> & {
+    country?: string;
+    state?: string;
+  };
+  packageDetails: {
+    type: string;
+    weight: number;
+    lengthCm: number;
+    widthCm: number;
+    heightCm: number;
+    quantity: number;
+    note?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -67,6 +91,44 @@ export interface RiderAddressBookEntry {
 /** Rider-only: deduped sender and recipient addresses from assigned shipments. */
 export async function getRiderAddressBook() {
   return apiGet<RiderAddressBookEntry[]>("/api/shipments/rider/me/address-book");
+}
+
+export type DimensionCategory = "small" | "medium" | "large" | "extraLarge";
+
+export interface ShipmentPriceEstimate {
+  currency: "NGN";
+  baseFee: number;
+  distanceMeters: number;
+  distanceKm: number;
+  distanceFee: number;
+  weightFee: number;
+  volumeCm3: number;
+  dimensionCategory: DimensionCategory;
+  dimensionFee: number;
+  total: number;
+}
+
+export interface EstimateShipmentPricePayload {
+  senderDetails: ContactDetailsPayload;
+  recipientDetails: ContactDetailsPayload;
+  weight: number;
+  lengthCm: number;
+  widthCm: number;
+  heightCm: number;
+}
+
+export function dimensionCategoryLabel(category: DimensionCategory): string {
+  const labels: Record<DimensionCategory, string> = {
+    small: "Small",
+    medium: "Medium",
+    large: "Large",
+    extraLarge: "Extra large",
+  };
+  return labels[category] ?? category;
+}
+
+export async function estimateShipmentPrice(payload: EstimateShipmentPricePayload) {
+  return apiPost<ShipmentPriceEstimate>("/api/shipments/estimate-price", payload);
 }
 
 export async function createShipment(payload: CreateShipmentPayload) {

@@ -16,6 +16,7 @@ import {
   type AdminShipmentDetail,
   type AdminShipmentRider,
 } from "@/lib/admin-api";
+import { formatContactLocation } from "@/lib/location-data";
 
 const backLinkClass =
   "inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold text-fuchsia-100 shadow-[0_0_18px_rgba(232,121,249,0.12)] transition hover:border-fuchsia-400/35 hover:bg-fuchsia-500/10 hover:shadow-[0_0_24px_rgba(232,121,249,0.25)]";
@@ -327,7 +328,7 @@ export default function AdminShipmentDetailPage() {
             <div className={`${glassCard} space-y-2`}>
               <h3 className="text-xs font-bold uppercase tracking-wider text-fuchsia-200/65">Recipient (drop-off)</h3>
               <p className="text-sm font-semibold text-white">{shipment.recipientDetails.fullName}</p>
-              <p className="text-sm text-white/55">{shipment.recipientDetails.address}</p>
+              <p className="text-sm text-white/55">{formatContactLocation(shipment.recipientDetails)}</p>
               <p className="text-sm font-mono text-white/50">{shipment.recipientDetails.phone}</p>
             </div>
           </div>
@@ -344,7 +345,20 @@ export default function AdminShipmentDetailPage() {
             <dl className="contents">
               <DetailRow label="Type" value={shipment.packageDetails.type} />
               <DetailRow label="Weight (kg)" value={shipment.packageDetails.weight} />
-              <DetailRow label="Dimensions" value={shipment.packageDetails.dimensions} />
+              <DetailRow
+                label="Dimensions"
+                value={
+                  shipment.packageDetails.lengthCm != null &&
+                  shipment.packageDetails.widthCm != null &&
+                  shipment.packageDetails.heightCm != null
+                    ? `${shipment.packageDetails.lengthCm} × ${shipment.packageDetails.widthCm} × ${shipment.packageDetails.heightCm} cm (${(
+                        shipment.packageDetails.lengthCm *
+                        shipment.packageDetails.widthCm *
+                        shipment.packageDetails.heightCm
+                      ).toLocaleString()} cm³)`
+                    : "—"
+                }
+              />
               <DetailRow label="Quantity" value={shipment.packageDetails.quantity} />
               {shipment.packageDetails.note ? (
                 <div className="sm:col-span-2">
