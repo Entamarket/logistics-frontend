@@ -19,7 +19,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "EntaLogistics — Smart delivery across Nigeria",
+  title: "Entamarket Logistics — Smart delivery across Nigeria",
   description:
     "Book instant or scheduled shipments, pay securely with Paystack, and track every mile in real time.",
 };

@@ -17,6 +17,8 @@ import {
   type AdminShipmentRider,
 } from "@/lib/admin-api";
 import { formatContactLocation } from "@/lib/location-data";
+import { formatWeightRangeLabel } from "@/lib/shipment-weight-tiers";
+import { formatPackageSizeLabel } from "@/lib/shipment-size-tiers";
 
 const backLinkClass =
   "inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold text-fuchsia-100 shadow-[0_0_18px_rgba(232,121,249,0.12)] transition hover:border-fuchsia-400/35 hover:bg-fuchsia-500/10 hover:shadow-[0_0_24px_rgba(232,121,249,0.25)]";
@@ -344,18 +346,18 @@ export default function AdminShipmentDetailPage() {
           <div className={`${glassCard} grid grid-cols-1 gap-4 sm:grid-cols-2`}>
             <dl className="contents">
               <DetailRow label="Type" value={shipment.packageDetails.type} />
-              <DetailRow label="Weight (kg)" value={shipment.packageDetails.weight} />
+              <DetailRow label="Weight" value={formatWeightRangeLabel(shipment.packageDetails.weight)} />
               <DetailRow
-                label="Dimensions"
+                label="Package size"
                 value={
                   shipment.packageDetails.lengthCm != null &&
                   shipment.packageDetails.widthCm != null &&
                   shipment.packageDetails.heightCm != null
-                    ? `${shipment.packageDetails.lengthCm} × ${shipment.packageDetails.widthCm} × ${shipment.packageDetails.heightCm} cm (${(
-                        shipment.packageDetails.lengthCm *
-                        shipment.packageDetails.widthCm *
+                    ? formatPackageSizeLabel(
+                        shipment.packageDetails.lengthCm,
+                        shipment.packageDetails.widthCm,
                         shipment.packageDetails.heightCm
-                      ).toLocaleString()} cm³)`
+                      )
                     : "—"
                 }
               />

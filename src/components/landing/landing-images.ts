@@ -22,7 +22,7 @@ export interface LandingImageMeta {
 export const LANDING_IMAGES: Record<LandingImageKey, LandingImageMeta> = {
   hero: {
     src: "/images/landing/hero.png",
-    alt: "EntaLogistics rider delivering a package in Lagos",
+    alt: "Entamarket Logistics rider delivering a package in Lagos",
     label: "Hero — delivery in action",
     filename: "hero.png",
   },

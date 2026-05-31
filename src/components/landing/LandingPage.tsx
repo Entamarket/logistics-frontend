@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
 import { ContactSection } from "./ContactSection";
+import { LandingBrand } from "./LandingBrand";
 import { LandingFooter } from "./LandingFooter";
 import { LandingImage } from "./LandingImage";
 import { LANDING_IMAGES } from "./landing-images";
@@ -235,14 +236,7 @@ export function LandingPage() {
       {/* Nav */}
       <header className="sticky top-0 z-50 border-b border-purple-100/60 bg-white/75 backdrop-blur-xl safe-area-inset">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <Link href="/" className="group flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#6a0068] to-[#81007f] text-sm font-bold text-white shadow-[0_4px_20px_rgba(129,0,127,0.4)] ring-1 ring-white/20 transition group-hover:shadow-[0_6px_28px_rgba(129,0,127,0.5)]">
-              E
-            </span>
-            <span className="font-display text-lg font-bold tracking-tight text-[#81007f]">
-              Enta<span className="text-neutral-800">Logistics</span>
-            </span>
-          </Link>
+          <LandingBrand />
 
           <nav className="hidden items-center gap-8 md:flex">
             <NavLink href="#features">Features</NavLink>
@@ -515,7 +509,7 @@ export function LandingPage() {
                 </h2>
                 <p className="mt-4 text-lg text-white/85">
                   Whether you&apos;re sending a parcel, earning on deliveries, or running
-                  logistics at scale—EntaLogistics gives each role the tools they need.
+                  logistics at scale—Entamarket Logistics gives each role the tools they need.
                 </p>
                 <div className="mt-8 flex flex-wrap gap-3">
                   <Link
@@ -594,7 +588,7 @@ export function LandingPage() {
               Ready to move your next shipment?
             </h2>
             <p className="mt-3 text-white/85">
-              Join EntaLogistics and experience delivery that keeps you in the loop.
+              Join Entamarket Logistics and experience delivery that keeps you in the loop.
             </p>
             <Link
               href="/auth/signup"

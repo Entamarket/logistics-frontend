@@ -12,7 +12,10 @@ import {
   type ShipmentPriceEstimate,
 } from "@/lib/shipment-api";
 import { openPaystackPayment } from "@/lib/paystack-inline";
-import { COUNTRY_OPTIONS, DEFAULT_COUNTRY_CODE, NIGERIA_STATES } from "@/lib/location-data";
+import { COUNTRY_OPTIONS, DEFAULT_COUNTRY_CODE } from "@/lib/location-data";
+import { RegionSelect } from "@/components/RegionSelect";
+import { WEIGHT_TIER_OPTIONS, weightKgFromTierId } from "@/lib/shipment-weight-tiers";
+import { PACKAGE_SIZE_OPTIONS, dimensionsFromSizeTierId } from "@/lib/shipment-size-tiers";
 import {
   ClientCostHighlight,
   ClientPageHeader,
@@ -79,10 +82,8 @@ export default function CreateShipmentPage() {
   });
   const [pkg, setPkg] = useState({
     type: "",
-    weight: "",
-    lengthCm: "",
-    widthCm: "",
-    heightCm: "",
+    weightTier: "",
+    sizeTier: "",
     quantity: "",
     note: "",
   });
@@ -106,7 +107,7 @@ export default function CreateShipmentPage() {
     setCalculatorMessage("");
     setSender({ fullName: "", address: "", phone: "", country: DEFAULT_COUNTRY_CODE, state: "" });
     setRecipient({ fullName: "", address: "", phone: "", country: DEFAULT_COUNTRY_CODE, state: "" });
-    setPkg({ type: "", weight: "", lengthCm: "", widthCm: "", heightCm: "", quantity: "", note: "" });
+    setPkg({ type: "", weightTier: "", sizeTier: "", quantity: "", note: "" });
   }
 
   function paymentErrorMessage(error: unknown, fallback: string): string {
@@ -168,26 +169,14 @@ export default function CreateShipmentPage() {
     e.preventDefault();
     setError("");
     setSuccess("");
-    const weight = parseFloat(pkg.weight);
-    const lengthCm = parseFloat(pkg.lengthCm);
-    const widthCm = parseFloat(pkg.widthCm);
-    const heightCm = parseFloat(pkg.heightCm);
+    const weight = weightKgFromTierId(pkg.weightTier);
+    const dimensions = dimensionsFromSizeTierId(pkg.sizeTier);
     const quantity = parseInt(pkg.quantity, 10);
-    if (
-      isNaN(weight) ||
-      weight < 0 ||
-      isNaN(lengthCm) ||
-      lengthCm < 0 ||
-      isNaN(widthCm) ||
-      widthCm < 0 ||
-      isNaN(heightCm) ||
-      heightCm < 0 ||
-      isNaN(quantity) ||
-      quantity < 1
-    ) {
-      setError("Please enter valid weight, length, width, height (cm), and quantity.");
+    if (weight === null || dimensions === null || isNaN(quantity) || quantity < 1) {
+      setError("Please select a weight range, package size, and enter a valid quantity.");
       return;
     }
+    const { lengthCm, widthCm, heightCm } = dimensions;
 
     if (!sender.state.trim()) {
       setError("Please select the sender's state.");
@@ -358,30 +347,25 @@ export default function CreateShipmentPage() {
     setCalculatorMessage("");
     setPriceEstimate(null);
 
-    const w = pkg.weight.trim();
-    if (!w) {
-      setCalculatorMessage("Please enter weight in the package details above.");
+    if (!pkg.weightTier) {
+      setCalculatorMessage("Please select a weight range in the package details above.");
       return;
     }
-    const weight = parseFloat(w);
-    if (isNaN(weight) || weight < 0) {
-      setCalculatorMessage("Please enter a valid weight in the package details above.");
+    const weight = weightKgFromTierId(pkg.weightTier);
+    if (weight === null) {
+      setCalculatorMessage("Please select a valid weight range in the package details above.");
       return;
     }
-    const lengthCm = parseFloat(pkg.lengthCm);
-    const widthCm = parseFloat(pkg.widthCm);
-    const heightCm = parseFloat(pkg.heightCm);
-    if (
-      isNaN(lengthCm) ||
-      lengthCm < 0 ||
-      isNaN(widthCm) ||
-      widthCm < 0 ||
-      isNaN(heightCm) ||
-      heightCm < 0
-    ) {
-      setCalculatorMessage("Please enter valid length, width, and height (cm) in the package details above.");
+    if (!pkg.sizeTier) {
+      setCalculatorMessage("Please select a package size in the package details above.");
       return;
     }
+    const dimensions = dimensionsFromSizeTierId(pkg.sizeTier);
+    if (dimensions === null) {
+      setCalculatorMessage("Please select a valid package size in the package details above.");
+      return;
+    }
+    const { lengthCm, widthCm, heightCm } = dimensions;
     if (!sender.state.trim() || !sender.address.trim()) {
       setCalculatorMessage("Complete sender state and address to estimate price.");
       return;
@@ -428,26 +412,17 @@ export default function CreateShipmentPage() {
         setCalculating(false);
       }
     }
-  }, [pkg.weight, pkg.lengthCm, pkg.widthCm, pkg.heightCm, sender, recipient]);
+  }, [pkg.weightTier, pkg.sizeTier, sender, recipient]);
 
-  const hasValidDimensionsForEstimate =
-    pkg.lengthCm.trim() !== "" &&
-    pkg.widthCm.trim() !== "" &&
-    pkg.heightCm.trim() !== "" &&
-    !isNaN(parseFloat(pkg.lengthCm)) &&
-    !isNaN(parseFloat(pkg.widthCm)) &&
-    !isNaN(parseFloat(pkg.heightCm)) &&
-    parseFloat(pkg.lengthCm) >= 0 &&
-    parseFloat(pkg.widthCm) >= 0 &&
-    parseFloat(pkg.heightCm) >= 0;
+  const hasValidSizeForEstimate = pkg.sizeTier !== "" && dimensionsFromSizeTierId(pkg.sizeTier) !== null;
 
   useEffect(() => {
-    if (!canEstimatePrice || !pkg.weight.trim() || !hasValidDimensionsForEstimate) {
+    if (!canEstimatePrice || !pkg.weightTier || !hasValidSizeForEstimate) {
       setPriceEstimate(null);
       return;
     }
-    const weight = parseFloat(pkg.weight);
-    if (isNaN(weight) || weight < 0) return;
+    const weight = weightKgFromTierId(pkg.weightTier);
+    if (weight === null) return;
 
     const timer = setTimeout(() => {
       void runPriceEstimate();
@@ -460,12 +435,10 @@ export default function CreateShipmentPage() {
     recipient.state,
     recipient.address,
     recipient.country,
-    pkg.weight,
-    pkg.lengthCm,
-    pkg.widthCm,
-    pkg.heightCm,
+    pkg.weightTier,
+    pkg.sizeTier,
     canEstimatePrice,
-    hasValidDimensionsForEstimate,
+    hasValidSizeForEstimate,
     runPriceEstimate,
   ]);
 
@@ -519,10 +492,12 @@ export default function CreateShipmentPage() {
                 </label>
                 <select
                   id="sender-country"
+                  required
                   value={sender.country}
-                  disabled
-                  className={`${clientInputClass} cursor-not-allowed opacity-90`}
-                  aria-readonly="true"
+                  onChange={(e) =>
+                    setSender((s) => ({ ...s, country: e.target.value, state: "" }))
+                  }
+                  className={clientInputClass}
                 >
                   {COUNTRY_OPTIONS.map((c) => (
                     <option key={c.code} value={c.code}>
@@ -531,25 +506,14 @@ export default function CreateShipmentPage() {
                   ))}
                 </select>
               </div>
-              <div>
-                <label htmlFor="sender-state" className={clientLabelClass}>
-                  State
-                </label>
-                <select
-                  id="sender-state"
-                  required
-                  value={sender.state}
-                  onChange={(e) => setSender((s) => ({ ...s, state: e.target.value }))}
-                  className={clientInputClass}
-                >
-                  <option value="">Select state</option>
-                  {NIGERIA_STATES.map((st) => (
-                    <option key={st} value={st}>
-                      {st}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <RegionSelect
+                id="sender-state"
+                countryCode={sender.country}
+                value={sender.state}
+                onChange={(state) => setSender((s) => ({ ...s, state }))}
+                labelClassName={clientLabelClass}
+                inputClassName={clientInputClass}
+              />
             </div>
             <div>
               <label htmlFor="sender-address" className={clientLabelClass}>
@@ -609,10 +573,12 @@ export default function CreateShipmentPage() {
                 </label>
                 <select
                   id="recipient-country"
+                  required
                   value={recipient.country}
-                  disabled
-                  className={`${clientInputClass} cursor-not-allowed opacity-90`}
-                  aria-readonly="true"
+                  onChange={(e) =>
+                    setRecipient((r) => ({ ...r, country: e.target.value, state: "" }))
+                  }
+                  className={clientInputClass}
                 >
                   {COUNTRY_OPTIONS.map((c) => (
                     <option key={c.code} value={c.code}>
@@ -621,25 +587,14 @@ export default function CreateShipmentPage() {
                   ))}
                 </select>
               </div>
-              <div>
-                <label htmlFor="recipient-state" className={clientLabelClass}>
-                  State
-                </label>
-                <select
-                  id="recipient-state"
-                  required
-                  value={recipient.state}
-                  onChange={(e) => setRecipient((r) => ({ ...r, state: e.target.value }))}
-                  className={clientInputClass}
-                >
-                  <option value="">Select state</option>
-                  {NIGERIA_STATES.map((st) => (
-                    <option key={st} value={st}>
-                      {st}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <RegionSelect
+                id="recipient-state"
+                countryCode={recipient.country}
+                value={recipient.state}
+                onChange={(state) => setRecipient((r) => ({ ...r, state }))}
+                labelClassName={clientLabelClass}
+                inputClassName={clientInputClass}
+              />
             </div>
             <div>
               <label htmlFor="recipient-address" className={clientLabelClass}>
@@ -719,76 +674,42 @@ export default function CreateShipmentPage() {
               />
             </div>
             <div>
-              <label htmlFor="pkg-weight" className={clientLabelClass}>
-                Weight (kg)
+              <label htmlFor="pkg-weightTier" className={clientLabelClass}>
+                Weight range
               </label>
-              <input
-                id="pkg-weight"
-                type="number"
-                step="0.01"
-                min="0"
+              <select
+                id="pkg-weightTier"
                 required
-                value={pkg.weight}
-                onChange={(e) => setPkg((p) => ({ ...p, weight: e.target.value }))}
+                value={pkg.weightTier}
+                onChange={(e) => setPkg((p) => ({ ...p, weightTier: e.target.value }))}
                 className={clientInputClass}
-                placeholder="0"
-              />
+              >
+                <option value="">Select weight range</option>
+                {WEIGHT_TIER_OPTIONS.map((tier) => (
+                  <option key={tier.id} value={tier.id}>
+                    {tier.label}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="sm:col-span-2">
-              <p className={clientLabelClass}>Dimensions (cm) — volume = L × W × H</p>
-              <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div>
-                  <label htmlFor="pkg-lengthCm" className="sr-only">
-                    Length (cm)
-                  </label>
-                  <input
-                    id="pkg-lengthCm"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={pkg.lengthCm}
-                    onChange={(e) => setPkg((p) => ({ ...p, lengthCm: e.target.value }))}
-                    className={clientInputClass}
-                    placeholder="Length (cm)"
-                    aria-label="Length in centimeters"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="pkg-widthCm" className="sr-only">
-                    Width (cm)
-                  </label>
-                  <input
-                    id="pkg-widthCm"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={pkg.widthCm}
-                    onChange={(e) => setPkg((p) => ({ ...p, widthCm: e.target.value }))}
-                    className={clientInputClass}
-                    placeholder="Width (cm)"
-                    aria-label="Width in centimeters"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="pkg-heightCm" className="sr-only">
-                    Height (cm)
-                  </label>
-                  <input
-                    id="pkg-heightCm"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={pkg.heightCm}
-                    onChange={(e) => setPkg((p) => ({ ...p, heightCm: e.target.value }))}
-                    className={clientInputClass}
-                    placeholder="Height (cm)"
-                    aria-label="Height in centimeters"
-                  />
-                </div>
-              </div>
+            <div>
+              <label htmlFor="pkg-sizeTier" className={clientLabelClass}>
+                Package size
+              </label>
+              <select
+                id="pkg-sizeTier"
+                required
+                value={pkg.sizeTier}
+                onChange={(e) => setPkg((p) => ({ ...p, sizeTier: e.target.value }))}
+                className={clientInputClass}
+              >
+                <option value="">Select package size</option>
+                {PACKAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size.id} value={size.id}>
+                    {size.dropdownLabel}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label htmlFor="pkg-quantity" className={clientLabelClass}>
@@ -823,7 +744,7 @@ export default function CreateShipmentPage() {
 
         <ClientSection
           title="Price calculator"
-          description="₦1,500 base + ₦150/km + weight tier + volume tier (≤20k cm³ free; up to 80k ₦500; up to 200k ₦1,000; over 200k ₦1,500). Updates when addresses, weight, or L×W×H change."
+          description="₦1,500 base + ₦150/km + weight tier + package size tier. Updates when addresses, weight range, or package size change."
           accent="amber"
         >
           <div className="space-y-3">

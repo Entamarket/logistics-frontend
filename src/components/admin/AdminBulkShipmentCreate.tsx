@@ -14,7 +14,8 @@ import {
   type AdminBulkShipmentItemPayload,
   type AdminBulkShipmentResult,
 } from "@/lib/admin-api";
-import { NIGERIA_STATES } from "@/lib/location-data";
+import { COUNTRY_OPTIONS, DEFAULT_COUNTRY_CODE } from "@/lib/location-data";
+import { RegionSelect } from "@/components/RegionSelect";
 
 const MAX_ROWS = 20;
 const inputClass =
@@ -68,8 +69,8 @@ function emptyRow(): ShipmentRow {
   return {
     localId: newRowId(),
     deliveryType: "instant",
-    sender: { fullName: "", address: "", phone: "", country: "NG", state: "" },
-    recipient: { fullName: "", address: "", phone: "", country: "NG", state: "" },
+    sender: { fullName: "", address: "", phone: "", country: DEFAULT_COUNTRY_CODE, state: "" },
+    recipient: { fullName: "", address: "", phone: "", country: DEFAULT_COUNTRY_CODE, state: "" },
     pkg: { type: "", weight: "", lengthCm: "", widthCm: "", heightCm: "", quantity: "1", note: "" },
     pickupLongitude: "",
     pickupLatitude: "",
@@ -157,14 +158,14 @@ function rowToPayload(row: ShipmentRow): AdminBulkShipmentItemPayload {
       fullName: row.sender.fullName.trim(),
       address: row.sender.address.trim(),
       phone: row.sender.phone.trim(),
-      country: row.sender.country || "NG",
+      country: row.sender.country || DEFAULT_COUNTRY_CODE,
       state: row.sender.state.trim(),
     },
     recipientDetails: {
       fullName: row.recipient.fullName.trim(),
       address: row.recipient.address.trim(),
       phone: row.recipient.phone.trim(),
-      country: row.recipient.country || "NG",
+      country: row.recipient.country || DEFAULT_COUNTRY_CODE,
       state: row.recipient.state.trim(),
     },
     packageDetails: {
@@ -474,21 +475,33 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
                 className={inputClass}
               />
               <select
-                value={row.sender.state}
+                value={row.sender.country}
                 onChange={(e) =>
-                  updateRow(row.localId, { sender: { ...row.sender, state: e.target.value } })
+                  updateRow(row.localId, {
+                    sender: { ...row.sender, country: e.target.value, state: "" },
+                  })
                 }
                 required
                 className={inputClass}
-                aria-label="Sender state"
+                aria-label="Sender country"
               >
-                <option value="">State</option>
-                {NIGERIA_STATES.map((st) => (
-                  <option key={st} value={st}>
-                    {st}
+                {COUNTRY_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.label}
                   </option>
                 ))}
               </select>
+              <RegionSelect
+                id={`sender-state-${row.localId}`}
+                countryCode={row.sender.country}
+                value={row.sender.state}
+                onChange={(state) =>
+                  updateRow(row.localId, { sender: { ...row.sender, state } })
+                }
+                inputClassName={inputClass}
+                hideLabel
+                ariaLabel="Sender state or province"
+              />
               <input
                 placeholder="Phone"
                 value={row.sender.phone}
@@ -507,7 +520,6 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
                 required
                 className={`${inputClass} sm:col-span-3`}
               />
-              <p className={`sm:col-span-3 text-xs text-white/40`}>Country: Nigeria (NG)</p>
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -522,21 +534,33 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
                 className={inputClass}
               />
               <select
-                value={row.recipient.state}
+                value={row.recipient.country}
                 onChange={(e) =>
-                  updateRow(row.localId, { recipient: { ...row.recipient, state: e.target.value } })
+                  updateRow(row.localId, {
+                    recipient: { ...row.recipient, country: e.target.value, state: "" },
+                  })
                 }
                 required
                 className={inputClass}
-                aria-label="Recipient state"
+                aria-label="Recipient country"
               >
-                <option value="">State</option>
-                {NIGERIA_STATES.map((st) => (
-                  <option key={st} value={st}>
-                    {st}
+                {COUNTRY_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.label}
                   </option>
                 ))}
               </select>
+              <RegionSelect
+                id={`recipient-state-${row.localId}`}
+                countryCode={row.recipient.country}
+                value={row.recipient.state}
+                onChange={(state) =>
+                  updateRow(row.localId, { recipient: { ...row.recipient, state } })
+                }
+                inputClassName={inputClass}
+                hideLabel
+                ariaLabel="Recipient state or province"
+              />
               <input
                 placeholder="Phone"
                 value={row.recipient.phone}
@@ -555,7 +579,6 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
                 required
                 className={`${inputClass} sm:col-span-3`}
               />
-              <p className={`sm:col-span-3 text-xs text-white/40`}>Country: Nigeria (NG)</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

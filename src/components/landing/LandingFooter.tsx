@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { LandingBrand } from "./LandingBrand";
 
 const CONTACT_EMAIL =
   process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "support@entamarket.com";
@@ -41,14 +42,7 @@ export function LandingFooter() {
       <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-16">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-12 lg:gap-8">
           <div className="lg:col-span-4">
-            <Link href="/" className="inline-flex items-center gap-2.5">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#6a0068] to-[#81007f] text-sm font-bold text-white shadow-[0_4px_20px_rgba(129,0,127,0.5)] ring-1 ring-white/10">
-                E
-              </span>
-              <span className="font-display text-xl font-bold text-white">
-                Enta<span className="text-neutral-400">Logistics</span>
-              </span>
-            </Link>
+            <LandingBrand variant="footer" />
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-neutral-400">
               Smart logistics for Nigeria — instant rider matching, live tracking,
               and secure Paystack payments from quote to delivery.
@@ -126,7 +120,7 @@ export function LandingFooter() {
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row">
           <p className="text-sm text-neutral-500">
-            © {year} EntaLogistics. All rights reserved.
+            © {year} Entamarket Logistics. All rights reserved.
           </p>
           <p className="text-sm text-neutral-600">
             Powered by{" "}

@@ -23,7 +23,7 @@ export function ContactSection() {
 
     const trimmedName = name.trim();
     const trimmedEmail = email.trim();
-    const trimmedSubject = subject.trim() || "EntaLogistics inquiry";
+    const trimmedSubject = subject.trim() || "Entamarket Logistics inquiry";
     const trimmedMessage = message.trim();
 
     if (!trimmedName || !trimmedEmail || !trimmedMessage) {

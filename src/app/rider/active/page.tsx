@@ -12,6 +12,8 @@ import {
   type ShipmentData,
 } from "@/lib/shipment-api";
 import { getMyRiderProfile, updateMyRiderLocation } from "@/lib/riders-api";
+import { formatWeightRangeLabel } from "@/lib/shipment-weight-tiers";
+import { formatPackageSizeLabel } from "@/lib/shipment-size-tiers";
 import { ShipmentMap } from "@/components/maps/ShipmentMap";
 import { OpenInGoogleMapsButton } from "@/components/maps/OpenInGoogleMapsButton";
 import {
@@ -390,7 +392,13 @@ export default function RiderActiveDeliveryPage() {
                 <div className="text-sm text-slate-600">
                   <p>
                     <span className="font-semibold text-slate-800">Package:</span> {s.packageDetails.type} ·{" "}
-                    {s.packageDetails.weight} kg · qty {s.packageDetails.quantity}
+                    {formatWeightRangeLabel(s.packageDetails.weight)} ·{" "}
+                    {formatPackageSizeLabel(
+                      s.packageDetails.lengthCm,
+                      s.packageDetails.widthCm,
+                      s.packageDetails.heightCm
+                    )}{" "}
+                    · qty {s.packageDetails.quantity}
                   </p>
                   {s.packageDetails.note ? <p className="mt-1">Note: {s.packageDetails.note}</p> : null}
                 </div>

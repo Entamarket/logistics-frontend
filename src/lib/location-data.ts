@@ -1,51 +1,41 @@
+import countryOptionsJson from "./country-options.generated.json";
+import countryStatesJson from "./country-states.generated.json";
+
 export const DEFAULT_COUNTRY_CODE = "NG";
 
-export const COUNTRY_OPTIONS = [{ code: "NG", label: "Nigeria" }] as const;
+export type CountryOption = { code: string; label: string };
 
-/** Nigerian states and the Federal Capital Territory (36 + FCT). */
-export const NIGERIA_STATES: readonly string[] = [
-  "Abia",
-  "Adamawa",
-  "Akwa Ibom",
-  "Anambra",
-  "Bauchi",
-  "Bayelsa",
-  "Benue",
-  "Borno",
-  "Cross River",
-  "Delta",
-  "Ebonyi",
-  "Edo",
-  "Ekiti",
-  "Enugu",
-  "Federal Capital Territory",
-  "Gombe",
-  "Imo",
-  "Jigawa",
-  "Kaduna",
-  "Kano",
-  "Katsina",
-  "Kebbi",
-  "Kogi",
-  "Kwara",
-  "Lagos",
-  "Nasarawa",
-  "Niger",
-  "Ogun",
-  "Ondo",
-  "Osun",
-  "Oyo",
-  "Plateau",
-  "Rivers",
-  "Sokoto",
-  "Taraba",
-  "Yobe",
-  "Zamfara",
-] as const;
+/** ISO 3166-1 alpha-2 countries, sorted by label. */
+export const COUNTRY_OPTIONS: CountryOption[] = countryOptionsJson as CountryOption[];
+
+/** State/province names keyed by ISO country code (subset of countries with known subdivisions). */
+const COUNTRY_STATES: Record<string, string[]> = countryStatesJson as Record<string, string[]>;
+
+export function normalizeCountryCode(code: string): string {
+  return code.trim().toUpperCase();
+}
+
+export function isNigeriaCountry(code: string): boolean {
+  return normalizeCountryCode(code) === DEFAULT_COUNTRY_CODE;
+}
+
+/** Returns sorted state/province names for a country, or an empty array if none are catalogued. */
+export function getStatesForCountry(countryCode: string): readonly string[] {
+  const code = normalizeCountryCode(countryCode);
+  return COUNTRY_STATES[code] ?? [];
+}
+
+export function hasStatesForCountry(countryCode: string): boolean {
+  return getStatesForCountry(countryCode).length > 0;
+}
+
+/** @deprecated Prefer getStatesForCountry("NG") — kept for backward compatibility. */
+export const NIGERIA_STATES: readonly string[] = getStatesForCountry(DEFAULT_COUNTRY_CODE);
 
 export function countryLabel(code: string | undefined): string {
   if (!code) return "";
-  const found = COUNTRY_OPTIONS.find((c) => c.code === code.toUpperCase());
+  const normalized = normalizeCountryCode(code);
+  const found = COUNTRY_OPTIONS.find((c) => c.code === normalized);
   return found?.label ?? code;
 }
 
