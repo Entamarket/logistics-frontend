@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   createShipment,
-  dimensionCategoryLabel,
   estimateShipmentPrice,
   initializeShipmentPayment,
   verifyShipmentPayment,
@@ -87,8 +86,9 @@ export default function CreateShipmentPage() {
     quantity: "",
     note: "",
   });
-  const [pickupLongitude, setPickupLongitude] = useState("");
-  const [pickupLatitude, setPickupLatitude] = useState("");
+  const [pickupCoords, setPickupCoords] = useState<{ longitude: number; latitude: number } | null>(
+    null
+  );
   const [recipientLongitude, setRecipientLongitude] = useState("");
   const [recipientLatitude, setRecipientLatitude] = useState("");
   const [geoLoading, setGeoLoading] = useState(false);
@@ -108,6 +108,7 @@ export default function CreateShipmentPage() {
     setSender({ fullName: "", address: "", phone: "", country: DEFAULT_COUNTRY_CODE, state: "" });
     setRecipient({ fullName: "", address: "", phone: "", country: DEFAULT_COUNTRY_CODE, state: "" });
     setPkg({ type: "", weightTier: "", sizeTier: "", quantity: "", note: "" });
+    setPickupCoords(null);
   }
 
   function paymentErrorMessage(error: unknown, fallback: string): string {
@@ -187,19 +188,6 @@ export default function CreateShipmentPage() {
       return;
     }
 
-    if (deliveryType === "instant") {
-      const lng = parseFloat(pickupLongitude);
-      const lat = parseFloat(pickupLatitude);
-      if (pickupLongitude.trim() === "" || pickupLatitude.trim() === "") {
-        setError("Pickup longitude and latitude are required for instant delivery so we can assign the nearest rider.");
-        return;
-      }
-      if (Number.isNaN(lng) || Number.isNaN(lat) || lng < -180 || lng > 180 || lat < -90 || lat > 90) {
-        setError("Enter valid pickup coordinates (longitude -180 to 180, latitude -90 to 90).");
-        return;
-      }
-    }
-
     const recLonS = recipientLongitude.trim();
     const recLatS = recipientLatitude.trim();
     if ((recLonS && !recLatS) || (!recLonS && recLatS)) {
@@ -267,9 +255,9 @@ export default function CreateShipmentPage() {
       payload.pickupWindowStart = start.toISOString();
       payload.pickupWindowEnd = end.toISOString();
     }
-    if (deliveryType === "instant") {
-      payload.pickupLongitude = parseFloat(pickupLongitude);
-      payload.pickupLatitude = parseFloat(pickupLatitude);
+    if (deliveryType === "instant" && pickupCoords) {
+      payload.pickupLongitude = pickupCoords.longitude;
+      payload.pickupLatitude = pickupCoords.latitude;
     }
     if (recLonS && recLatS) {
       payload.recipientLongitude = parseFloat(recLonS);
@@ -327,12 +315,14 @@ export default function CreateShipmentPage() {
     setError("");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setPickupLongitude(String(pos.coords.longitude));
-        setPickupLatitude(String(pos.coords.latitude));
+        setPickupCoords({
+          longitude: pos.coords.longitude,
+          latitude: pos.coords.latitude,
+        });
         setGeoLoading(false);
       },
       () => {
-        setError("Could not read your location. Enter coordinates manually.");
+        setError("Could not read your location. We'll use your sender address to match a rider.");
         setGeoLoading(false);
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -744,7 +734,7 @@ export default function CreateShipmentPage() {
 
         <ClientSection
           title="Price calculator"
-          description="₦1,500 base + ₦150/km + weight tier + package size tier. Updates when addresses, weight range, or package size change."
+          description="Updates when addresses, weight range, or package size change."
           accent="amber"
         >
           <div className="space-y-3">
@@ -764,36 +754,6 @@ export default function CreateShipmentPage() {
               ) : null}
               {priceEstimate !== null ? <ClientCostHighlight amount={priceEstimate.total} /> : null}
             </div>
-            {priceEstimate !== null ? (
-              <div className={`${clientInsetPanel} space-y-1.5 text-sm text-neutral-700`}>
-                <p className="flex justify-between gap-4">
-                  <span>Base fee</span>
-                  <span className="font-medium tabular-nums">₦{priceEstimate.baseFee.toLocaleString()}</span>
-                </p>
-                <p className="flex justify-between gap-4">
-                  <span>
-                    Distance ({priceEstimate.distanceKm} km
-                    {priceEstimate.distanceKm < 1 ? ", under 1 km — no distance charge" : ""})
-                  </span>
-                  <span className="font-medium tabular-nums">₦{priceEstimate.distanceFee.toLocaleString()}</span>
-                </p>
-                <p className="flex justify-between gap-4">
-                  <span>Weight tier</span>
-                  <span className="font-medium tabular-nums">₦{priceEstimate.weightFee.toLocaleString()}</span>
-                </p>
-                <p className="flex justify-between gap-4">
-                  <span>
-                    Size ({dimensionCategoryLabel(priceEstimate.dimensionCategory)} ·{" "}
-                    {priceEstimate.volumeCm3.toLocaleString()} cm³)
-                  </span>
-                  <span className="font-medium tabular-nums">₦{priceEstimate.dimensionFee.toLocaleString()}</span>
-                </p>
-                <p className="flex justify-between gap-4 border-t border-neutral-200/80 pt-1.5 font-semibold text-neutral-900">
-                  <span>Total</span>
-                  <span className="tabular-nums">₦{priceEstimate.total.toLocaleString()}</span>
-                </p>
-              </div>
-            ) : null}
           </div>
         </ClientSection>
 
@@ -821,7 +781,10 @@ export default function CreateShipmentPage() {
                   name="deliveryType"
                   value="scheduled"
                   checked={deliveryType === "scheduled"}
-                  onChange={() => setDeliveryType("scheduled")}
+                  onChange={() => {
+                    setDeliveryType("scheduled");
+                    setPickupCoords(null);
+                  }}
                   className="mt-1 h-4 w-4 border-neutral-300 text-[#81007f] focus:ring-[#81007f]"
                 />
                 <span>
@@ -832,50 +795,35 @@ export default function CreateShipmentPage() {
             </div>
           </fieldset>
           {deliveryType === "instant" && (
-            <div className={`${clientInsetPanel} mt-2 space-y-4`}>
+            <div className={`${clientInsetPanel} mt-2 space-y-3`}>
               <p className="text-sm text-neutral-600">
-                Pickup coordinates (WGS84) assign the nearest rider. Example for Lagos: latitude 6.52, longitude 3.38.
+                We match the nearest rider using your sender address. Optionally share your current location
+                for a more precise pickup point.
               </p>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="pickup-lng" className={clientLabelClass}>
-                    Pickup longitude
-                  </label>
-                  <input
-                    id="pickup-lng"
-                    type="number"
-                    step="any"
-                    required={deliveryType === "instant"}
-                    value={pickupLongitude}
-                    onChange={(e) => setPickupLongitude(e.target.value)}
-                    className={clientInputClass}
-                    placeholder="3.3792"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="pickup-lat" className={clientLabelClass}>
-                    Pickup latitude
-                  </label>
-                  <input
-                    id="pickup-lat"
-                    type="number"
-                    step="any"
-                    required={deliveryType === "instant"}
-                    value={pickupLatitude}
-                    onChange={(e) => setPickupLatitude(e.target.value)}
-                    className={clientInputClass}
-                    placeholder="6.5244"
-                  />
-                </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleUsePickupLocation}
+                  disabled={geoLoading}
+                  className="text-sm font-semibold text-[#81007f] hover:underline disabled:opacity-60"
+                >
+                  {geoLoading ? "Getting location…" : "Use my current location"}
+                </button>
+                {pickupCoords ? (
+                  <>
+                    <p className="text-sm text-emerald-700" role="status">
+                      Location saved for rider matching.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setPickupCoords(null)}
+                      className="text-sm text-neutral-500 hover:text-neutral-700 hover:underline"
+                    >
+                      Use sender address instead
+                    </button>
+                  </>
+                ) : null}
               </div>
-              <button
-                type="button"
-                onClick={handleUsePickupLocation}
-                disabled={geoLoading}
-                className="text-sm font-semibold text-[#81007f] hover:underline disabled:opacity-60"
-              >
-                {geoLoading ? "Getting location…" : "Use my current location"}
-              </button>
             </div>
           )}
           {deliveryType === "scheduled" && (
