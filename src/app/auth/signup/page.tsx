@@ -12,12 +12,17 @@ export default function SignUpPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
     setLoading(true);
     const res = await signUp({ firstName, lastName, email, phone, password });
     setLoading(false);
@@ -131,9 +136,26 @@ export default function SignUpPage() {
           <p className="mt-1 text-xs text-neutral-500">Must be at least 8 characters</p>
         </div>
 
+        <div>
+          <label htmlFor="confirmPassword" className="block text-sm font-medium text-neutral-700">
+            Confirm password
+          </label>
+          <input
+            id="confirmPassword"
+            type="password"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            minLength={8}
+            className="mt-1 block w-full min-h-[44px] rounded-lg border border-neutral-300 px-4 py-2.5 text-base text-neutral-900 placeholder-neutral-400 focus:border-[#81007f] focus:outline-none focus:ring-1 focus:ring-[#81007f]"
+            placeholder="Re-enter your password"
+          />
+        </div>
+
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || password !== confirmPassword}
           className="w-full min-h-[44px] rounded-lg bg-[#81007f] px-4 py-3 font-medium text-white transition hover:bg-[#6a0068] active:bg-[#5a0058] focus:outline-none focus:ring-2 focus:ring-[#81007f] focus:ring-offset-2 disabled:opacity-60"
         >
           {loading ? "Creating account…" : "Create account"}

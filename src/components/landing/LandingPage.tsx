@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
 import { ContactSection } from "./ContactSection";
+import { HeroShipmentTracker } from "./HeroShipmentTracker";
 import { LandingBrand } from "./LandingBrand";
 import { LandingFooter } from "./LandingFooter";
 import { LandingImage } from "./LandingImage";
@@ -321,6 +322,8 @@ export function LandingPage() {
                 </div>
               ))}
             </dl>
+
+            <HeroShipmentTracker />
           </div>
 
           <HeroVisual />

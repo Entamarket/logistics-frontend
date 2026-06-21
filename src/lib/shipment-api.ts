@@ -177,6 +177,19 @@ export async function getShipmentTracking(shipmentId: string) {
   return apiGet<ShipmentTrackingData>(`/api/shipments/${shipmentId}/tracking`);
 }
 
+export interface PublicShipmentStatus {
+  shipmentId: string;
+  status: string;
+  deliveryType: string;
+  updatedAt: string;
+}
+
+/** Public lookup — no login required (landing page tracker). */
+export async function getPublicShipmentStatus(shipmentId: string) {
+  const trimmed = shipmentId.trim().replace(/^#/, "");
+  return apiGet<PublicShipmentStatus>(`/api/shipments/track/${encodeURIComponent(trimmed)}`);
+}
+
 export async function markShipmentPickedUp(shipmentId: string) {
   return apiPatch<ShipmentData>(`/api/shipments/${shipmentId}/picked-up`, {});
 }

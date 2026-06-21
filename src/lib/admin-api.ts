@@ -146,6 +146,22 @@ export interface AdminShipmentDetail extends AdminShipmentListItem {
   updatedAt: string;
 }
 
+export interface AdminShipmentExportItem extends AdminShipmentDetail {
+  paystackReference?: string;
+  paidAt?: string;
+  deliveredAt?: string;
+}
+
+export interface AdminShipmentExportResult {
+  generatedAt: string;
+  year: number;
+  month?: number;
+  label: string;
+  count: number;
+  availableYears: number[];
+  shipments: AdminShipmentExportItem[];
+}
+
 export function getClientDisplayName(client: Pick<AdminClient, "firstName" | "lastName" | "email">): string {
   const name = `${client.firstName} ${client.lastName}`.trim();
   return name || client.email || "—";
@@ -223,6 +239,15 @@ export async function getAdminShipments(params?: { status?: string; limit?: numb
   if (params?.limit != null) search.set("limit", String(params.limit));
   const q = search.toString();
   return apiGet<AdminShipmentListItem[]>(`/api/admin/shipments${q ? `?${q}` : ""}`);
+}
+
+export async function getAdminShipmentsExport(params: { year: number; month?: number }) {
+  const search = new URLSearchParams();
+  search.set("year", String(params.year));
+  if (params.month != null) {
+    search.set("month", String(params.month));
+  }
+  return apiGet<AdminShipmentExportResult>(`/api/admin/shipments/export?${search.toString()}`);
 }
 
 export async function getAdminShipmentById(id: string) {

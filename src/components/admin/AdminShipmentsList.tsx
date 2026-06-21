@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   getAdminShipments,
+  getAdminShipmentsExport,
   getClientDisplayName,
   getAdminRiderDisplayName,
   formatAdminDate,
@@ -12,6 +13,20 @@ import {
   shortShipmentId,
   type AdminShipmentListItem,
 } from "@/lib/admin-api";
+import { exportAdminShipmentsXlsx } from "@/lib/export-admin-shipments-xlsx";
+
+const CURRENT_YEAR = new Date().getFullYear();
+
+const exportButtonClass =
+  "inline-flex shrink-0 items-center justify-center rounded-xl border border-emerald-400/45 bg-emerald-500/20 px-4 py-2.5 text-sm font-semibold text-emerald-100 shadow-[0_0_18px_rgba(52,211,153,0.2)] transition hover:border-emerald-300/55 hover:bg-emerald-500/30 hover:shadow-[0_0_24px_rgba(52,211,153,0.35)] disabled:cursor-not-allowed disabled:opacity-50";
+
+const MONTH_EXPORT_OPTIONS: { value: string; label: string }[] = [
+  { value: "", label: "All months" },
+  ...Array.from({ length: 12 }, (_, i) => ({
+    value: String(i + 1),
+    label: new Date(2000, i, 1).toLocaleString(undefined, { month: "long" }),
+  })),
+];
 
 const STATUS_FILTER_OPTIONS: { value: string; label: string }[] = [
   { value: "", label: "All statuses" },
@@ -67,6 +82,17 @@ export function AdminShipmentsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [exportYear, setExportYear] = useState(CURRENT_YEAR);
+  const [exportMonth, setExportMonth] = useState("");
+  const [availableYears, setAvailableYears] = useState<number[]>([CURRENT_YEAR]);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
+
+  const yearOptions = useMemo(() => {
+    const set = new Set(availableYears);
+    set.add(exportYear);
+    return [...set].sort((a, b) => b - a);
+  }, [availableYears, exportYear]);
 
   const load = useCallback(async () => {
     setError("");
@@ -92,6 +118,31 @@ export function AdminShipmentsList() {
     load();
   }, [load]);
 
+  async function handleExport() {
+    setExportError("");
+    setExporting(true);
+    const res = await getAdminShipmentsExport({
+      year: exportYear,
+      month: exportMonth ? parseInt(exportMonth, 10) : undefined,
+    });
+    setExporting(false);
+    if (res.success && res.data) {
+      setAvailableYears(res.data.availableYears);
+      if (res.data.count === 0) {
+        setExportError("No shipments found for the selected period.");
+        return;
+      }
+      exportAdminShipmentsXlsx(res.data);
+      return;
+    }
+    const msg = res.message || "Failed to export shipments";
+    if (msg.toLowerCase().includes("admin access") || msg.toLowerCase().includes("auth")) {
+      router.replace("/auth/login");
+      return;
+    }
+    setExportError(msg);
+  }
+
   const stats = useMemo(() => {
     const total = shipments.length;
     const delivered = shipments.filter((s) => s.status === "delivered").length;
@@ -101,6 +152,67 @@ export function AdminShipmentsList() {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-200/80">
+              Export to Excel
+            </p>
+            <p className="text-sm text-white/50">
+              Download full shipment records for a calendar year or a single month. Includes client,
+              rider, sender and recipient details, pricing, and payment info.
+            </p>
+          </div>
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end lg:w-auto">
+            <label className="block w-full text-sm text-white/60 sm:w-auto sm:min-w-[140px]">
+              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.2em] text-fuchsia-200/70">
+                Year
+              </span>
+              <select
+                value={exportYear}
+                onChange={(e) => setExportYear(parseInt(e.target.value, 10))}
+                className={selectFilterClass}
+              >
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block w-full text-sm text-white/60 sm:w-auto sm:min-w-[160px]">
+              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.2em] text-fuchsia-200/70">
+                Month
+              </span>
+              <select
+                value={exportMonth}
+                onChange={(e) => setExportMonth(e.target.value)}
+                className={selectFilterClass}
+              >
+                {MONTH_EXPORT_OPTIONS.map((opt) => (
+                  <option key={opt.value || "all"} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className={exportButtonClass}
+              disabled={exporting}
+              onClick={handleExport}
+            >
+              {exporting ? "Exporting…" : "Export Excel"}
+            </button>
+          </div>
+        </div>
+        {exportError ? (
+          <p className="mt-3 text-sm text-amber-200/90" role="alert">
+            {exportError}
+          </p>
+        ) : null}
+      </div>
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <label className="block w-full text-sm text-white/60 sm:max-w-xs">
           <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.2em] text-fuchsia-200/70">
