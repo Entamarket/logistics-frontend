@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   getAdminClients,
@@ -16,6 +16,9 @@ import {
 } from "@/lib/admin-api";
 import { COUNTRY_OPTIONS, DEFAULT_COUNTRY_CODE } from "@/lib/location-data";
 import { RegionSelect } from "@/components/RegionSelect";
+import { WEIGHT_TIER_OPTIONS, weightKgFromTierId } from "@/lib/shipment-weight-tiers";
+import { PACKAGE_SIZE_OPTIONS, dimensionsFromSizeTierId } from "@/lib/shipment-size-tiers";
+import { estimateShipmentPrice } from "@/lib/shipment-api";
 
 const MAX_ROWS = 20;
 const inputClass =
@@ -51,10 +54,8 @@ interface ShipmentRow {
   recipient: { fullName: string; address: string; phone: string; country: string; state: string };
   pkg: {
     type: string;
-    weight: string;
-    lengthCm: string;
-    widthCm: string;
-    heightCm: string;
+    weightTier: string;
+    sizeTier: string;
     quantity: string;
     note: string;
   };
@@ -71,7 +72,7 @@ function emptyRow(): ShipmentRow {
     deliveryType: "instant",
     sender: { fullName: "", address: "", phone: "", country: DEFAULT_COUNTRY_CODE, state: "" },
     recipient: { fullName: "", address: "", phone: "", country: DEFAULT_COUNTRY_CODE, state: "" },
-    pkg: { type: "", weight: "", lengthCm: "", widthCm: "", heightCm: "", quantity: "1", note: "" },
+    pkg: { type: "", weightTier: "", sizeTier: "", quantity: "1", note: "" },
     pickupLongitude: "",
     pickupLatitude: "",
     pickupDate: "",
@@ -96,24 +97,17 @@ function validateRow(row: ShipmentRow, rowNum: number): string | null {
   if (!row.pkg.type.trim()) {
     return `Shipment ${rowNum}: package type is required.`;
   }
-  const weight = parseFloat(row.pkg.weight);
-  const lengthCm = parseFloat(row.pkg.lengthCm);
-  const widthCm = parseFloat(row.pkg.widthCm);
-  const heightCm = parseFloat(row.pkg.heightCm);
+  if (!row.pkg.weightTier) {
+    return `Shipment ${rowNum}: select a weight range.`;
+  }
+  if (!row.pkg.sizeTier) {
+    return `Shipment ${rowNum}: select a package size.`;
+  }
+  const weight = weightKgFromTierId(row.pkg.weightTier);
+  const dimensions = dimensionsFromSizeTierId(row.pkg.sizeTier);
   const quantity = parseInt(row.pkg.quantity, 10);
-  if (
-    isNaN(weight) ||
-    weight < 0 ||
-    isNaN(lengthCm) ||
-    lengthCm < 0 ||
-    isNaN(widthCm) ||
-    widthCm < 0 ||
-    isNaN(heightCm) ||
-    heightCm < 0 ||
-    isNaN(quantity) ||
-    quantity < 1
-  ) {
-    return `Shipment ${rowNum}: enter valid weight, length/width/height (cm), and quantity.`;
+  if (weight === null || dimensions === null || isNaN(quantity) || quantity < 1) {
+    return `Shipment ${rowNum}: enter valid weight range, package size, and quantity.`;
   }
   if (row.deliveryType === "instant") {
     const lng = parseFloat(row.pickupLongitude);
@@ -147,10 +141,8 @@ function validateRow(row: ShipmentRow, rowNum: number): string | null {
 }
 
 function rowToPayload(row: ShipmentRow): AdminBulkShipmentItemPayload {
-  const weight = parseFloat(row.pkg.weight);
-  const lengthCm = parseFloat(row.pkg.lengthCm);
-  const widthCm = parseFloat(row.pkg.widthCm);
-  const heightCm = parseFloat(row.pkg.heightCm);
+  const weight = weightKgFromTierId(row.pkg.weightTier)!;
+  const { lengthCm, widthCm, heightCm } = dimensionsFromSizeTierId(row.pkg.sizeTier)!;
   const quantity = parseInt(row.pkg.quantity, 10);
   const payload: AdminBulkShipmentItemPayload = {
     deliveryType: row.deliveryType,
@@ -193,6 +185,468 @@ function rowToPayload(row: ShipmentRow): AdminBulkShipmentItemPayload {
     payload.riderId = row.riderIdOverride.trim();
   }
   return payload;
+}
+
+function AdminCostHighlight({ amount }: { amount: number }) {
+  return (
+    <p
+      className="inline-flex rounded-xl border border-emerald-400/35 bg-emerald-500/10 px-4 py-2 text-base font-bold text-emerald-100 shadow-[0_0_18px_rgba(52,211,153,0.2)]"
+      role="status"
+    >
+      Estimated cost: ₦{amount.toLocaleString()}
+    </p>
+  );
+}
+
+function BulkShipmentRow({
+  row,
+  index,
+  riders,
+  showRemove,
+  onUpdate,
+  onRemove,
+}: {
+  row: ShipmentRow;
+  index: number;
+  riders: AdminShipmentRider[];
+  showRemove: boolean;
+  onUpdate: (localId: string, patch: Partial<ShipmentRow>) => void;
+  onRemove: (localId: string) => void;
+}) {
+  const [priceEstimate, setPriceEstimate] = useState<number | null>(null);
+  const [calculatorMessage, setCalculatorMessage] = useState("");
+  const [calculating, setCalculating] = useState(false);
+  const estimateRequestId = useRef(0);
+
+  const canEstimatePrice =
+    Boolean(row.sender.state.trim() && row.sender.address.trim()) &&
+    Boolean(row.recipient.state.trim() && row.recipient.address.trim());
+
+  const runPriceEstimate = useCallback(async () => {
+    setCalculatorMessage("");
+    setPriceEstimate(null);
+
+    if (!row.pkg.weightTier) {
+      setCalculatorMessage("Select a weight range above.");
+      return;
+    }
+    const weight = weightKgFromTierId(row.pkg.weightTier);
+    if (weight === null) {
+      setCalculatorMessage("Select a valid weight range.");
+      return;
+    }
+    if (!row.pkg.sizeTier) {
+      setCalculatorMessage("Select a package size above.");
+      return;
+    }
+    const dimensions = dimensionsFromSizeTierId(row.pkg.sizeTier);
+    if (dimensions === null) {
+      setCalculatorMessage("Select a valid package size.");
+      return;
+    }
+    const { lengthCm, widthCm, heightCm } = dimensions;
+    if (!row.sender.state.trim() || !row.sender.address.trim()) {
+      setCalculatorMessage("Complete sender state and address.");
+      return;
+    }
+    if (!row.recipient.state.trim() || !row.recipient.address.trim()) {
+      setCalculatorMessage("Complete recipient state and address.");
+      return;
+    }
+
+    const requestId = ++estimateRequestId.current;
+    setCalculating(true);
+    try {
+      const res = await estimateShipmentPrice({
+        senderDetails: {
+          fullName: row.sender.fullName.trim() || "Sender",
+          address: row.sender.address.trim(),
+          phone: row.sender.phone.trim() || "0000000000",
+          country: row.sender.country,
+          state: row.sender.state.trim(),
+        },
+        recipientDetails: {
+          fullName: row.recipient.fullName.trim() || "Recipient",
+          address: row.recipient.address.trim(),
+          phone: row.recipient.phone.trim() || "0000000000",
+          country: row.recipient.country,
+          state: row.recipient.state.trim(),
+        },
+        weight,
+        lengthCm,
+        widthCm,
+        heightCm,
+      });
+      if (requestId !== estimateRequestId.current) return;
+      if (res.success && res.data) {
+        setPriceEstimate(res.data.total);
+      } else {
+        setCalculatorMessage(res.message || "Could not estimate price.");
+      }
+    } catch {
+      if (requestId !== estimateRequestId.current) return;
+      setCalculatorMessage("Could not estimate price. Check addresses and try again.");
+    } finally {
+      if (requestId === estimateRequestId.current) {
+        setCalculating(false);
+      }
+    }
+  }, [
+    row.sender.fullName,
+    row.sender.address,
+    row.sender.phone,
+    row.sender.country,
+    row.sender.state,
+    row.recipient.fullName,
+    row.recipient.address,
+    row.recipient.phone,
+    row.recipient.country,
+    row.recipient.state,
+    row.pkg.weightTier,
+    row.pkg.sizeTier,
+  ]);
+
+  const hasValidSizeForEstimate =
+    row.pkg.sizeTier !== "" && dimensionsFromSizeTierId(row.pkg.sizeTier) !== null;
+
+  useEffect(() => {
+    if (!canEstimatePrice || !row.pkg.weightTier || !hasValidSizeForEstimate) {
+      setPriceEstimate(null);
+      return;
+    }
+    if (weightKgFromTierId(row.pkg.weightTier) === null) return;
+
+    const timer = setTimeout(() => {
+      void runPriceEstimate();
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [
+    row.sender.state,
+    row.sender.address,
+    row.sender.country,
+    row.recipient.state,
+    row.recipient.address,
+    row.recipient.country,
+    row.pkg.weightTier,
+    row.pkg.sizeTier,
+    canEstimatePrice,
+    hasValidSizeForEstimate,
+    runPriceEstimate,
+  ]);
+
+  return (
+    <fieldset className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-[0_0_32px_-12px_rgba(129,0,127,0.25),inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <div className="flex items-center justify-between gap-2">
+        <legend className="text-sm font-bold text-fuchsia-200 drop-shadow-[0_0_12px_rgba(232,121,249,0.35)]">
+          Shipment {index + 1}
+        </legend>
+        {showRemove && (
+          <button
+            type="button"
+            onClick={() => onRemove(row.localId)}
+            className="text-xs font-semibold text-red-300/90 hover:text-red-200 hover:underline"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label className="block">
+          <span className={labelClass}>Delivery type</span>
+          <select
+            value={row.deliveryType}
+            onChange={(e) =>
+              onUpdate(row.localId, { deliveryType: e.target.value as "instant" | "scheduled" })
+            }
+            className={inputClass}
+          >
+            <option value="instant">Instant</option>
+            <option value="scheduled">Scheduled</option>
+          </select>
+        </label>
+        <label className="block">
+          <span className={labelClass}>
+            Rider override <span className="font-normal text-white/45">(optional)</span>
+          </span>
+          <select
+            value={row.riderIdOverride}
+            onChange={(e) => onUpdate(row.localId, { riderIdOverride: e.target.value })}
+            className={inputClass}
+          >
+            <option value="">Use default rider</option>
+            {riders.map((r) => (
+              <option key={r.riderId} value={r.riderId}>
+                {getAdminRiderDisplayName(r)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <p className={`sm:col-span-3 ${sectionLabelClass}`}>Sender</p>
+        <input
+          placeholder="Full name"
+          value={row.sender.fullName}
+          onChange={(e) =>
+            onUpdate(row.localId, { sender: { ...row.sender, fullName: e.target.value } })
+          }
+          required
+          className={inputClass}
+        />
+        <select
+          value={row.sender.country}
+          onChange={(e) =>
+            onUpdate(row.localId, {
+              sender: { ...row.sender, country: e.target.value, state: "" },
+            })
+          }
+          required
+          className={inputClass}
+          aria-label="Sender country"
+        >
+          {COUNTRY_OPTIONS.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+        <RegionSelect
+          id={`sender-state-${row.localId}`}
+          countryCode={row.sender.country}
+          value={row.sender.state}
+          onChange={(state) => onUpdate(row.localId, { sender: { ...row.sender, state } })}
+          inputClassName={inputClass}
+          hideLabel
+          ariaLabel="Sender state or province"
+        />
+        <input
+          placeholder="Phone"
+          value={row.sender.phone}
+          onChange={(e) =>
+            onUpdate(row.localId, { sender: { ...row.sender, phone: e.target.value } })
+          }
+          required
+          className={inputClass}
+        />
+        <input
+          placeholder="Address (street, area)"
+          value={row.sender.address}
+          onChange={(e) =>
+            onUpdate(row.localId, { sender: { ...row.sender, address: e.target.value } })
+          }
+          required
+          className={`${inputClass} sm:col-span-3`}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <p className={`sm:col-span-3 ${sectionLabelClass}`}>Recipient</p>
+        <input
+          placeholder="Full name"
+          value={row.recipient.fullName}
+          onChange={(e) =>
+            onUpdate(row.localId, { recipient: { ...row.recipient, fullName: e.target.value } })
+          }
+          required
+          className={inputClass}
+        />
+        <select
+          value={row.recipient.country}
+          onChange={(e) =>
+            onUpdate(row.localId, {
+              recipient: { ...row.recipient, country: e.target.value, state: "" },
+            })
+          }
+          required
+          className={inputClass}
+          aria-label="Recipient country"
+        >
+          {COUNTRY_OPTIONS.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+        <RegionSelect
+          id={`recipient-state-${row.localId}`}
+          countryCode={row.recipient.country}
+          value={row.recipient.state}
+          onChange={(state) => onUpdate(row.localId, { recipient: { ...row.recipient, state } })}
+          inputClassName={inputClass}
+          hideLabel
+          ariaLabel="Recipient state or province"
+        />
+        <input
+          placeholder="Phone"
+          value={row.recipient.phone}
+          onChange={(e) =>
+            onUpdate(row.localId, { recipient: { ...row.recipient, phone: e.target.value } })
+          }
+          required
+          className={inputClass}
+        />
+        <input
+          placeholder="Address (street, area)"
+          value={row.recipient.address}
+          onChange={(e) =>
+            onUpdate(row.localId, { recipient: { ...row.recipient, address: e.target.value } })
+          }
+          required
+          className={`${inputClass} sm:col-span-3`}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <p className={`sm:col-span-2 ${sectionLabelClass}`}>Package</p>
+        <label className="block">
+          <span className={labelClass}>Type</span>
+          <input
+            placeholder="e.g. Box, Envelope"
+            value={row.pkg.type}
+            onChange={(e) => onUpdate(row.localId, { pkg: { ...row.pkg, type: e.target.value } })}
+            required
+            className={inputClass}
+          />
+        </label>
+        <label className="block">
+          <span className={labelClass}>Weight range</span>
+          <select
+            value={row.pkg.weightTier}
+            onChange={(e) =>
+              onUpdate(row.localId, { pkg: { ...row.pkg, weightTier: e.target.value } })
+            }
+            required
+            className={inputClass}
+          >
+            <option value="">Select weight range</option>
+            {WEIGHT_TIER_OPTIONS.map((tier) => (
+              <option key={tier.id} value={tier.id}>
+                {tier.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className={labelClass}>Package size</span>
+          <select
+            value={row.pkg.sizeTier}
+            onChange={(e) =>
+              onUpdate(row.localId, { pkg: { ...row.pkg, sizeTier: e.target.value } })
+            }
+            required
+            className={inputClass}
+          >
+            <option value="">Select package size</option>
+            {PACKAGE_SIZE_OPTIONS.map((size) => (
+              <option key={size.id} value={size.id}>
+                {size.dropdownLabel}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className={labelClass}>Quantity</span>
+          <input
+            placeholder="1"
+            type="number"
+            min={1}
+            value={row.pkg.quantity}
+            onChange={(e) =>
+              onUpdate(row.localId, { pkg: { ...row.pkg, quantity: e.target.value } })
+            }
+            required
+            className={inputClass}
+          />
+        </label>
+        <label className="block sm:col-span-2">
+          <span className={labelClass}>
+            Note <span className="font-normal text-white/45">(optional)</span>
+          </span>
+          <input
+            placeholder="Special instructions"
+            value={row.pkg.note}
+            onChange={(e) => onUpdate(row.localId, { pkg: { ...row.pkg, note: e.target.value } })}
+            className={inputClass}
+          />
+        </label>
+      </div>
+
+      <div className="rounded-xl border border-amber-400/25 bg-amber-500/5 p-4">
+        <p className={`mb-3 ${sectionLabelClass}`}>Price calculator</p>
+        <p className="mb-3 text-xs text-white/45">
+          Updates when addresses, weight range, or package size change.
+        </p>
+        <div className="flex flex-col flex-wrap gap-3 sm:flex-row sm:items-center">
+          <button
+            type="button"
+            onClick={() => void runPriceEstimate()}
+            disabled={calculating}
+            className="min-h-[40px] rounded-lg border border-white/15 bg-white/5 px-4 text-sm font-semibold text-white/85 transition hover:bg-white/10 disabled:opacity-50"
+          >
+            {calculating ? "Calculating…" : "Calculate cost"}
+          </button>
+          {calculatorMessage ? (
+            <p className="text-sm text-amber-200/90" role="status">
+              {calculatorMessage}
+            </p>
+          ) : null}
+          {priceEstimate !== null ? <AdminCostHighlight amount={priceEstimate} /> : null}
+        </div>
+      </div>
+
+      {row.deliveryType === "instant" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label className="block">
+            <span className={labelClass}>Pickup longitude</span>
+            <input
+              type="text"
+              value={row.pickupLongitude}
+              onChange={(e) => onUpdate(row.localId, { pickupLongitude: e.target.value })}
+              required
+              className={inputClass}
+            />
+          </label>
+          <label className="block">
+            <span className={labelClass}>Pickup latitude</span>
+            <input
+              type="text"
+              value={row.pickupLatitude}
+              onChange={(e) => onUpdate(row.localId, { pickupLatitude: e.target.value })}
+              required
+              className={inputClass}
+            />
+          </label>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label className="block">
+            <span className={labelClass}>Pickup date</span>
+            <input
+              type="date"
+              min={getToday()}
+              max={getMaxPickupDate()}
+              value={row.pickupDate}
+              onChange={(e) => onUpdate(row.localId, { pickupDate: e.target.value })}
+              required
+              className={inputClass}
+            />
+          </label>
+          <label className="block">
+            <span className={labelClass}>Pickup time</span>
+            <input
+              type="time"
+              value={row.pickupWindowStart}
+              onChange={(e) => onUpdate(row.localId, { pickupWindowStart: e.target.value })}
+              required
+              className={inputClass}
+            />
+          </label>
+        </div>
+      )}
+    </fieldset>
+  );
 }
 
 interface AdminBulkShipmentCreateProps {
@@ -411,289 +865,15 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
         </div>
 
         {rows.map((row, index) => (
-          <fieldset
+          <BulkShipmentRow
             key={row.localId}
-            className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-[0_0_32px_-12px_rgba(129,0,127,0.25),inset_0_1px_0_rgba(255,255,255,0.06)]"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <legend className="text-sm font-bold text-fuchsia-200 drop-shadow-[0_0_12px_rgba(232,121,249,0.35)]">
-                Shipment {index + 1}
-              </legend>
-              {rows.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeRow(row.localId)}
-                  className="text-xs font-semibold text-red-300/90 hover:text-red-200 hover:underline"
-                >
-                  Remove
-                </button>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label className="block">
-                <span className={labelClass}>Delivery type</span>
-                <select
-                  value={row.deliveryType}
-                  onChange={(e) =>
-                    updateRow(row.localId, { deliveryType: e.target.value as "instant" | "scheduled" })
-                  }
-                  className={inputClass}
-                >
-                  <option value="instant">Instant</option>
-                  <option value="scheduled">Scheduled</option>
-                </select>
-              </label>
-              <label className="block">
-                <span className={labelClass}>
-                  Rider override <span className="font-normal text-white/45">(optional)</span>
-                </span>
-                <select
-                  value={row.riderIdOverride}
-                  onChange={(e) => updateRow(row.localId, { riderIdOverride: e.target.value })}
-                  className={inputClass}
-                >
-                  <option value="">Use default rider</option>
-                  {riders.map((r) => (
-                    <option key={r.riderId} value={r.riderId}>
-                      {getAdminRiderDisplayName(r)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <p className={`sm:col-span-3 ${sectionLabelClass}`}>Sender</p>
-              <input
-                placeholder="Full name"
-                value={row.sender.fullName}
-                onChange={(e) =>
-                  updateRow(row.localId, { sender: { ...row.sender, fullName: e.target.value } })
-                }
-                required
-                className={inputClass}
-              />
-              <select
-                value={row.sender.country}
-                onChange={(e) =>
-                  updateRow(row.localId, {
-                    sender: { ...row.sender, country: e.target.value, state: "" },
-                  })
-                }
-                required
-                className={inputClass}
-                aria-label="Sender country"
-              >
-                {COUNTRY_OPTIONS.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-              <RegionSelect
-                id={`sender-state-${row.localId}`}
-                countryCode={row.sender.country}
-                value={row.sender.state}
-                onChange={(state) =>
-                  updateRow(row.localId, { sender: { ...row.sender, state } })
-                }
-                inputClassName={inputClass}
-                hideLabel
-                ariaLabel="Sender state or province"
-              />
-              <input
-                placeholder="Phone"
-                value={row.sender.phone}
-                onChange={(e) =>
-                  updateRow(row.localId, { sender: { ...row.sender, phone: e.target.value } })
-                }
-                required
-                className={inputClass}
-              />
-              <input
-                placeholder="Address (street, area)"
-                value={row.sender.address}
-                onChange={(e) =>
-                  updateRow(row.localId, { sender: { ...row.sender, address: e.target.value } })
-                }
-                required
-                className={`${inputClass} sm:col-span-3`}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <p className={`sm:col-span-3 ${sectionLabelClass}`}>Recipient</p>
-              <input
-                placeholder="Full name"
-                value={row.recipient.fullName}
-                onChange={(e) =>
-                  updateRow(row.localId, { recipient: { ...row.recipient, fullName: e.target.value } })
-                }
-                required
-                className={inputClass}
-              />
-              <select
-                value={row.recipient.country}
-                onChange={(e) =>
-                  updateRow(row.localId, {
-                    recipient: { ...row.recipient, country: e.target.value, state: "" },
-                  })
-                }
-                required
-                className={inputClass}
-                aria-label="Recipient country"
-              >
-                {COUNTRY_OPTIONS.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-              <RegionSelect
-                id={`recipient-state-${row.localId}`}
-                countryCode={row.recipient.country}
-                value={row.recipient.state}
-                onChange={(state) =>
-                  updateRow(row.localId, { recipient: { ...row.recipient, state } })
-                }
-                inputClassName={inputClass}
-                hideLabel
-                ariaLabel="Recipient state or province"
-              />
-              <input
-                placeholder="Phone"
-                value={row.recipient.phone}
-                onChange={(e) =>
-                  updateRow(row.localId, { recipient: { ...row.recipient, phone: e.target.value } })
-                }
-                required
-                className={inputClass}
-              />
-              <input
-                placeholder="Address (street, area)"
-                value={row.recipient.address}
-                onChange={(e) =>
-                  updateRow(row.localId, { recipient: { ...row.recipient, address: e.target.value } })
-                }
-                required
-                className={`${inputClass} sm:col-span-3`}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <p className={`col-span-full ${sectionLabelClass}`}>Package</p>
-              <input
-                placeholder="Type"
-                value={row.pkg.type}
-                onChange={(e) => updateRow(row.localId, { pkg: { ...row.pkg, type: e.target.value } })}
-                required
-                className={inputClass}
-              />
-              <input
-                placeholder="Weight (kg)"
-                type="number"
-                min={0}
-                step="0.1"
-                value={row.pkg.weight}
-                onChange={(e) => updateRow(row.localId, { pkg: { ...row.pkg, weight: e.target.value } })}
-                required
-                className={inputClass}
-              />
-              <input
-                placeholder="L (cm)"
-                type="number"
-                min={0}
-                value={row.pkg.lengthCm}
-                onChange={(e) => updateRow(row.localId, { pkg: { ...row.pkg, lengthCm: e.target.value } })}
-                required
-                className={inputClass}
-              />
-              <input
-                placeholder="W (cm)"
-                type="number"
-                min={0}
-                value={row.pkg.widthCm}
-                onChange={(e) => updateRow(row.localId, { pkg: { ...row.pkg, widthCm: e.target.value } })}
-                required
-                className={inputClass}
-              />
-              <input
-                placeholder="H (cm)"
-                type="number"
-                min={0}
-                value={row.pkg.heightCm}
-                onChange={(e) => updateRow(row.localId, { pkg: { ...row.pkg, heightCm: e.target.value } })}
-                required
-                className={inputClass}
-              />
-              <input
-                placeholder="Qty"
-                type="number"
-                min={1}
-                value={row.pkg.quantity}
-                onChange={(e) => updateRow(row.localId, { pkg: { ...row.pkg, quantity: e.target.value } })}
-                required
-                className={inputClass}
-              />
-              <input
-                placeholder="Note (optional)"
-                value={row.pkg.note}
-                onChange={(e) => updateRow(row.localId, { pkg: { ...row.pkg, note: e.target.value } })}
-                className={`${inputClass} col-span-full`}
-              />
-            </div>
-
-            {row.deliveryType === "instant" ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="block">
-                  <span className={labelClass}>Pickup longitude</span>
-                  <input
-                    type="text"
-                    value={row.pickupLongitude}
-                    onChange={(e) => updateRow(row.localId, { pickupLongitude: e.target.value })}
-                    required
-                    className={inputClass}
-                  />
-                </label>
-                <label className="block">
-                  <span className={labelClass}>Pickup latitude</span>
-                  <input
-                    type="text"
-                    value={row.pickupLatitude}
-                    onChange={(e) => updateRow(row.localId, { pickupLatitude: e.target.value })}
-                    required
-                    className={inputClass}
-                  />
-                </label>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="block">
-                  <span className={labelClass}>Pickup date</span>
-                  <input
-                    type="date"
-                    min={getToday()}
-                    max={getMaxPickupDate()}
-                    value={row.pickupDate}
-                    onChange={(e) => updateRow(row.localId, { pickupDate: e.target.value })}
-                    required
-                    className={inputClass}
-                  />
-                </label>
-                <label className="block">
-                  <span className={labelClass}>Pickup time</span>
-                  <input
-                    type="time"
-                    value={row.pickupWindowStart}
-                    onChange={(e) => updateRow(row.localId, { pickupWindowStart: e.target.value })}
-                    required
-                    className={inputClass}
-                  />
-                </label>
-              </div>
-            )}
-          </fieldset>
+            row={row}
+            index={index}
+            riders={riders}
+            showRemove={rows.length > 1}
+            onUpdate={updateRow}
+            onRemove={removeRow}
+          />
         ))}
 
         <div className="flex flex-wrap gap-3">
