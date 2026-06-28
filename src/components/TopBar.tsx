@@ -47,7 +47,7 @@ export function TopBar({ brandHref = "/dashboard", onMenuClick }: TopBarProps) {
           </button>
         )}
         <Link href={brandHref} className="flex items-center shrink-0" onClick={() => setDropdownOpen(false)}>
-          <img src="/logo.jpg" alt="Logo" className="h-9 w-auto object-contain" />
+          <img src="/images/logo/logo.jpg" alt="Logo" className="h-9 w-auto object-contain" />
         </Link>
       </div>
 

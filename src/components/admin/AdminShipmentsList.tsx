@@ -190,7 +190,7 @@ export function AdminShipmentsList() {
                 className={selectFilterClass}
               >
                 {MONTH_EXPORT_OPTIONS.map((opt) => (
-                  <option key={opt.value || "all"} value={opt.value}>
+                  <option key={opt.value || "all"} value={opt.value} className="text-neutral-900">
                     {opt.label}
                   </option>
                 ))}

@@ -534,6 +534,38 @@ export default function CreateShipmentPage() {
               />
             </div>
           </div>
+          {deliveryType === "instant" && (
+            <div className={`${clientInsetPanel} mt-4 space-y-3`}>
+              <p className="text-sm text-neutral-600">
+                We match the nearest rider using your sender address. Optionally share your current location
+                for a more precise pickup point.
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleUsePickupLocation}
+                  disabled={geoLoading}
+                  className="text-sm font-semibold text-[#81007f] hover:underline disabled:opacity-60"
+                >
+                  {geoLoading ? "Getting location…" : "Use my current location"}
+                </button>
+                {pickupCoords ? (
+                  <>
+                    <p className="text-sm text-emerald-700" role="status">
+                      Location saved for rider matching.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setPickupCoords(null)}
+                      className="text-sm text-neutral-500 hover:text-neutral-700 hover:underline"
+                    >
+                      Use sender address instead
+                    </button>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          )}
         </ClientSection>
 
         <ClientSection
@@ -794,38 +826,6 @@ export default function CreateShipmentPage() {
               </label>
             </div>
           </fieldset>
-          {deliveryType === "instant" && (
-            <div className={`${clientInsetPanel} mt-2 space-y-3`}>
-              <p className="text-sm text-neutral-600">
-                We match the nearest rider using your sender address. Optionally share your current location
-                for a more precise pickup point.
-              </p>
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleUsePickupLocation}
-                  disabled={geoLoading}
-                  className="text-sm font-semibold text-[#81007f] hover:underline disabled:opacity-60"
-                >
-                  {geoLoading ? "Getting location…" : "Use my current location"}
-                </button>
-                {pickupCoords ? (
-                  <>
-                    <p className="text-sm text-emerald-700" role="status">
-                      Location saved for rider matching.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setPickupCoords(null)}
-                      className="text-sm text-neutral-500 hover:text-neutral-700 hover:underline"
-                    >
-                      Use sender address instead
-                    </button>
-                  </>
-                ) : null}
-              </div>
-            </div>
-          )}
           {deliveryType === "scheduled" && (
             <div className={`${clientInsetPanel} mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2`}>
               <div>

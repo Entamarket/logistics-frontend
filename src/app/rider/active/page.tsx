@@ -272,7 +272,7 @@ export default function RiderActiveDeliveryPage() {
         <div className="space-y-6">
           <RiderPageHeader
             badge="On route"
-            title="Active delivery"
+            title="Active deliveries"
             description="Loading your current jobs…"
             icon={<TruckIcon className="h-6 w-6" />}
           />
@@ -290,8 +290,8 @@ export default function RiderActiveDeliveryPage() {
       <div className="space-y-6">
         <RiderPageHeader
           badge="On route"
-          title="Active delivery"
-          description="New offers must be accepted within 3 minutes or they go to another rider. Your location is shared with the sender while you have an active job (about every 15 seconds)."
+          title="Active deliveries"
+          description="You may have several jobs at once. New offers must be accepted within 3 minutes or they go to another rider. Your location is shared with senders while you have active jobs (about every 15 seconds)."
           icon={<TruckIcon className="h-6 w-6" />}
         />
 
@@ -306,8 +306,8 @@ export default function RiderActiveDeliveryPage() {
         {shipments.length === 0 ? (
           <RiderEmptyState
             icon={<TruckIcon className="h-7 w-7" />}
-            title="No active delivery"
-            description="When you accept a job it will show up here with route, contacts, and status actions."
+            title="No active deliveries"
+            description="When you accept jobs they will show up here with route, contacts, and status actions."
           />
         ) : (
         <ul className="space-y-6">

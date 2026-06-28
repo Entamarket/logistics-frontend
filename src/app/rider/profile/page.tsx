@@ -201,7 +201,7 @@ export default function RiderProfilePage() {
           <form onSubmit={handleSaveAvailability} className="space-y-4 p-5">
             <h2 className="text-lg font-bold text-[#6a0068]">Availability</h2>
             <p className="text-sm text-slate-600">
-              Going unavailable stops new job offers. Current deliveries are not cancelled.
+              Going off duty stops new job offers. You can still receive multiple offers while on duty. Current deliveries are not cancelled.
             </p>
             <fieldset>
               <legend className="sr-only">Availability for new jobs</legend>
