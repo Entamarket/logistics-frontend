@@ -33,6 +33,7 @@ import {
   riderNeonBoxPurple,
   riderStatusBadge,
 } from "@/components/rider/RiderUI";
+import { AdminShipmentBadge, isPlaceholderContactValue } from "@/components/AdminShipmentBadge";
 
 const AWAITING = "awaiting_rider_response";
 
@@ -377,10 +378,21 @@ export default function RiderActiveDeliveryPage() {
 
                 <div className="grid gap-3 sm:grid-cols-2 text-sm">
                   <div className={riderNeonBoxAmber}>
-                    <p className="font-bold text-amber-900">Pickup (sender)</p>
-                    <p className="mt-1 text-slate-800">{s.senderDetails.fullName}</p>
-                    <p className="text-slate-600">{s.senderDetails.address}</p>
-                    <p className="text-slate-600">{s.senderDetails.phone}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-bold text-amber-900">Pickup (sender)</p>
+                      {s.createdByAdmin ? <AdminShipmentBadge /> : null}
+                    </div>
+                    <p className="mt-1 text-slate-800">
+                      {s.createdByAdmin ? "ADMIN" : s.senderDetails.fullName}
+                    </p>
+                    {!isPlaceholderContactValue(s.senderDetails.address) ? (
+                      <p className="text-slate-600">{s.senderDetails.address}</p>
+                    ) : s.pickupLongitude != null && s.pickupLatitude != null ? (
+                      <p className="text-slate-600">Use map coordinates for pickup</p>
+                    ) : null}
+                    {!isPlaceholderContactValue(s.senderDetails.phone) ? (
+                      <p className="text-slate-600">{s.senderDetails.phone}</p>
+                    ) : null}
                   </div>
                   <div className={riderNeonBoxPurple}>
                     <p className="font-bold text-[#6a0068]">Delivery (recipient)</p>

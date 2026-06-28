@@ -114,8 +114,29 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     mountedRef.current = true;
     void refreshUnread();
     connect();
+
+    const pollInterval = setInterval(() => {
+      void refreshUnread();
+    }, 15_000);
+
+    const onFocus = () => {
+      void refreshUnread();
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refreshUnread();
+      }
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     return () => {
       mountedRef.current = false;
+      clearInterval(pollInterval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current);
       }

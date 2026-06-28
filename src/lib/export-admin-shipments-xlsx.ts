@@ -3,7 +3,8 @@ import type { AdminShipmentExportItem, AdminShipmentExportResult } from "./admin
 import {
   formatAdminDate,
   getAdminRiderDisplayName,
-  getClientDisplayName,
+  getAdminShipmentClientLabel,
+  getAdminShipmentClientEmail,
   shortShipmentId,
 } from "./admin-api";
 
@@ -41,9 +42,9 @@ function shipmentDataRows(shipments: AdminShipmentExportItem[]): (string | numbe
       s.paymentStatus,
       formatOptionalDate(s.paidAt),
       s.paystackReference ?? "—",
-      getClientDisplayName(s.client),
-      s.client.email,
-      s.client.phone,
+      getAdminShipmentClientLabel(s.client),
+      getAdminShipmentClientEmail(s.client),
+      s.client?.phone?.trim() ? s.client.phone : "—",
       s.rider ? getAdminRiderDisplayName(s.rider) : "—",
       s.rider?.email ?? "—",
       s.rider?.phone ?? "—",

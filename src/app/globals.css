@@ -39,6 +39,19 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/*
+ * Dropdown option readability.
+ * Native <option> popups render against an OS-controlled (usually light)
+ * surface. Selects styled for dark themes set light text, which then blends
+ * into that surface. Force dark text on a white background for every option
+ * so list items stay readable without hovering.
+ */
+select option,
+select optgroup {
+  background-color: #ffffff;
+  color: #171717;
+}
+
 /* ——— Landing page animations ——— */
 
 @keyframes landing-float {

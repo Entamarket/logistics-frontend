@@ -68,6 +68,8 @@ export interface ShipmentData {
   };
   createdAt: string;
   updatedAt: string;
+  /** Set when an admin created the shipment on behalf of a client. */
+  createdByAdmin?: boolean;
 }
 
 export async function getShipments() {
@@ -109,12 +111,14 @@ export interface ShipmentPriceEstimate {
 }
 
 export interface EstimateShipmentPricePayload {
-  senderDetails: ContactDetailsPayload;
+  senderDetails?: ContactDetailsPayload;
   recipientDetails: ContactDetailsPayload;
   weight: number;
   lengthCm: number;
   widthCm: number;
   heightCm: number;
+  pickupLongitude?: number;
+  pickupLatitude?: number;
 }
 
 export function dimensionCategoryLabel(category: DimensionCategory): string {

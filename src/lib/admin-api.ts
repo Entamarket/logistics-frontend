@@ -105,7 +105,7 @@ export interface AdminShipmentListItem {
   price: number;
   paymentStatus: string;
   createdAt: string;
-  client: AdminClient;
+  client: AdminClient | null;
   rider: AdminShipmentRider | null;
   assignmentLabel: string;
 }
@@ -143,6 +143,8 @@ export interface AdminShipmentDetail extends AdminShipmentListItem {
   recipientLatitude?: number;
   riderResponseDeadline?: string;
   declinedRiderCount: number;
+  createdByAdmin?: boolean;
+  createdByAdminUser?: AdminClient | null;
   updatedAt: string;
 }
 
@@ -165,6 +167,16 @@ export interface AdminShipmentExportResult {
 export function getClientDisplayName(client: Pick<AdminClient, "firstName" | "lastName" | "email">): string {
   const name = `${client.firstName} ${client.lastName}`.trim();
   return name || client.email || "—";
+}
+
+export function getAdminShipmentClientLabel(client: AdminClient | null | undefined): string {
+  if (client == null) return "Admin account";
+  return getClientDisplayName(client);
+}
+
+export function getAdminShipmentClientEmail(client: AdminClient | null | undefined): string {
+  if (client == null) return "—";
+  return client.email || "—";
 }
 
 export function getAdminRiderDisplayName(rider: AdminShipmentRider): string {
@@ -278,8 +290,7 @@ export async function assignAdminShipmentToRider(shipmentId: string, riderId: st
 
 export interface AdminBulkShipmentItemPayload {
   deliveryType: "instant" | "scheduled";
-  senderDetails: {
-    fullName: string;
+  pickupDetails?: {
     address: string;
     phone: string;
     country: string;
@@ -318,7 +329,7 @@ export interface AdminBulkShipmentResult {
 }
 
 export async function createAdminShipmentsBulk(payload: {
-  clientId: string;
+  clientId?: string;
   defaultRiderId: string;
   shipments: AdminBulkShipmentItemPayload[];
 }) {

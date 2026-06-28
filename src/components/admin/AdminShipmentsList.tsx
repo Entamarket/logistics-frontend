@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import {
   getAdminShipments,
   getAdminShipmentsExport,
-  getClientDisplayName,
+  getAdminShipmentClientLabel,
+  getAdminShipmentClientEmail,
   getAdminRiderDisplayName,
   formatAdminDate,
   shipmentStatusNeonClass,
@@ -310,8 +311,10 @@ export function AdminShipmentsList() {
                       <span className={shipmentStatusNeonClass(s.status)}>{s.status.replace(/_/g, " ")}</span>
                     </td>
                     <td className="px-4 py-4">
-                      <div className="font-medium text-white/95">{getClientDisplayName(s.client)}</div>
-                      <div className="hidden text-xs text-white/40 sm:block">{s.client.email}</div>
+                      <div className="font-medium text-white/95">{getAdminShipmentClientLabel(s.client)}</div>
+                      <div className="hidden text-xs text-white/40 sm:block">
+                        {getAdminShipmentClientEmail(s.client)}
+                      </div>
                     </td>
                     <td className="hidden px-4 py-4 text-sm text-white/65 md:table-cell">
                       {s.rider ? (

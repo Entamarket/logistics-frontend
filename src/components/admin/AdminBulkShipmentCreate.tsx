@@ -50,7 +50,7 @@ function newRowId(): string {
 interface ShipmentRow {
   localId: string;
   deliveryType: "instant" | "scheduled";
-  sender: { fullName: string; address: string; phone: string; country: string; state: string };
+  pickupLocation: { address: string; phone: string; country: string; state: string };
   recipient: { fullName: string; address: string; phone: string; country: string; state: string };
   pkg: {
     type: string;
@@ -70,7 +70,7 @@ function emptyRow(): ShipmentRow {
   return {
     localId: newRowId(),
     deliveryType: "instant",
-    sender: { fullName: "", address: "", phone: "", country: DEFAULT_COUNTRY_CODE, state: "" },
+    pickupLocation: { address: "", phone: "", country: DEFAULT_COUNTRY_CODE, state: "" },
     recipient: { fullName: "", address: "", phone: "", country: DEFAULT_COUNTRY_CODE, state: "" },
     pkg: { type: "", weightTier: "", sizeTier: "", quantity: "1", note: "" },
     pickupLongitude: "",
@@ -82,11 +82,13 @@ function emptyRow(): ShipmentRow {
 }
 
 function validateRow(row: ShipmentRow, rowNum: number): string | null {
-  if (!row.sender.fullName.trim() || !row.sender.address.trim() || !row.sender.phone.trim()) {
-    return `Shipment ${rowNum}: sender details are required.`;
-  }
-  if (!row.sender.state.trim()) {
-    return `Shipment ${rowNum}: sender state is required.`;
+  if (row.deliveryType === "scheduled") {
+    if (!row.pickupLocation.address.trim() || !row.pickupLocation.phone.trim()) {
+      return `Shipment ${rowNum}: pickup location address and phone are required for scheduled delivery.`;
+    }
+    if (!row.pickupLocation.state.trim()) {
+      return `Shipment ${rowNum}: pickup location state is required for scheduled delivery.`;
+    }
   }
   if (!row.recipient.fullName.trim() || !row.recipient.address.trim() || !row.recipient.phone.trim()) {
     return `Shipment ${rowNum}: recipient details are required.`;
@@ -146,13 +148,6 @@ function rowToPayload(row: ShipmentRow): AdminBulkShipmentItemPayload {
   const quantity = parseInt(row.pkg.quantity, 10);
   const payload: AdminBulkShipmentItemPayload = {
     deliveryType: row.deliveryType,
-    senderDetails: {
-      fullName: row.sender.fullName.trim(),
-      address: row.sender.address.trim(),
-      phone: row.sender.phone.trim(),
-      country: row.sender.country || DEFAULT_COUNTRY_CODE,
-      state: row.sender.state.trim(),
-    },
     recipientDetails: {
       fullName: row.recipient.fullName.trim(),
       address: row.recipient.address.trim(),
@@ -170,6 +165,14 @@ function rowToPayload(row: ShipmentRow): AdminBulkShipmentItemPayload {
       note: row.pkg.note.trim() || undefined,
     },
   };
+  if (row.deliveryType === "scheduled") {
+    payload.pickupDetails = {
+      address: row.pickupLocation.address.trim(),
+      phone: row.pickupLocation.phone.trim(),
+      country: row.pickupLocation.country || DEFAULT_COUNTRY_CODE,
+      state: row.pickupLocation.state.trim(),
+    };
+  }
   if (row.deliveryType === "instant") {
     payload.pickupLongitude = parseFloat(row.pickupLongitude);
     payload.pickupLatitude = parseFloat(row.pickupLatitude);
@@ -219,8 +222,11 @@ function BulkShipmentRow({
   const estimateRequestId = useRef(0);
 
   const canEstimatePrice =
-    Boolean(row.sender.state.trim() && row.sender.address.trim()) &&
-    Boolean(row.recipient.state.trim() && row.recipient.address.trim());
+    row.deliveryType === "instant"
+      ? Boolean(row.pickupLongitude.trim() && row.pickupLatitude.trim()) &&
+        Boolean(row.recipient.state.trim() && row.recipient.address.trim())
+      : Boolean(row.pickupLocation.state.trim() && row.pickupLocation.address.trim()) &&
+        Boolean(row.recipient.state.trim() && row.recipient.address.trim());
 
   const runPriceEstimate = useCallback(async () => {
     setCalculatorMessage("");
@@ -245,9 +251,22 @@ function BulkShipmentRow({
       return;
     }
     const { lengthCm, widthCm, heightCm } = dimensions;
-    if (!row.sender.state.trim() || !row.sender.address.trim()) {
-      setCalculatorMessage("Complete sender state and address.");
-      return;
+    if (row.deliveryType === "instant") {
+      const lng = parseFloat(row.pickupLongitude);
+      const lat = parseFloat(row.pickupLatitude);
+      if (row.pickupLongitude.trim() === "" || row.pickupLatitude.trim() === "") {
+        setCalculatorMessage("Enter pickup coordinates for instant delivery.");
+        return;
+      }
+      if (Number.isNaN(lng) || Number.isNaN(lat)) {
+        setCalculatorMessage("Enter valid pickup coordinates.");
+        return;
+      }
+    } else {
+      if (!row.pickupLocation.state.trim() || !row.pickupLocation.address.trim()) {
+        setCalculatorMessage("Complete pickup location state and address.");
+        return;
+      }
     }
     if (!row.recipient.state.trim() || !row.recipient.address.trim()) {
       setCalculatorMessage("Complete recipient state and address.");
@@ -257,14 +276,20 @@ function BulkShipmentRow({
     const requestId = ++estimateRequestId.current;
     setCalculating(true);
     try {
+      const lng = parseFloat(row.pickupLongitude);
+      const lat = parseFloat(row.pickupLatitude);
       const res = await estimateShipmentPrice({
-        senderDetails: {
-          fullName: row.sender.fullName.trim() || "Sender",
-          address: row.sender.address.trim(),
-          phone: row.sender.phone.trim() || "0000000000",
-          country: row.sender.country,
-          state: row.sender.state.trim(),
-        },
+        ...(row.deliveryType === "instant"
+          ? { pickupLongitude: lng, pickupLatitude: lat }
+          : {
+              senderDetails: {
+                fullName: "ADMIN",
+                address: row.pickupLocation.address.trim(),
+                phone: row.pickupLocation.phone.trim() || "0000000000",
+                country: row.pickupLocation.country,
+                state: row.pickupLocation.state.trim(),
+              },
+            }),
         recipientDetails: {
           fullName: row.recipient.fullName.trim() || "Recipient",
           address: row.recipient.address.trim(),
@@ -292,11 +317,13 @@ function BulkShipmentRow({
       }
     }
   }, [
-    row.sender.fullName,
-    row.sender.address,
-    row.sender.phone,
-    row.sender.country,
-    row.sender.state,
+    row.deliveryType,
+    row.pickupLongitude,
+    row.pickupLatitude,
+    row.pickupLocation.address,
+    row.pickupLocation.phone,
+    row.pickupLocation.country,
+    row.pickupLocation.state,
     row.recipient.fullName,
     row.recipient.address,
     row.recipient.phone,
@@ -321,9 +348,12 @@ function BulkShipmentRow({
     }, 600);
     return () => clearTimeout(timer);
   }, [
-    row.sender.state,
-    row.sender.address,
-    row.sender.country,
+    row.deliveryType,
+    row.pickupLongitude,
+    row.pickupLatitude,
+    row.pickupLocation.state,
+    row.pickupLocation.address,
+    row.pickupLocation.country,
     row.recipient.state,
     row.recipient.address,
     row.recipient.country,
@@ -384,62 +414,69 @@ function BulkShipmentRow({
         </label>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <p className={`sm:col-span-3 ${sectionLabelClass}`}>Sender</p>
-        <input
-          placeholder="Full name"
-          value={row.sender.fullName}
-          onChange={(e) =>
-            onUpdate(row.localId, { sender: { ...row.sender, fullName: e.target.value } })
-          }
-          required
-          className={inputClass}
-        />
-        <select
-          value={row.sender.country}
-          onChange={(e) =>
-            onUpdate(row.localId, {
-              sender: { ...row.sender, country: e.target.value, state: "" },
-            })
-          }
-          required
-          className={inputClass}
-          aria-label="Sender country"
-        >
-          {COUNTRY_OPTIONS.map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.label}
-            </option>
-          ))}
-        </select>
-        <RegionSelect
-          id={`sender-state-${row.localId}`}
-          countryCode={row.sender.country}
-          value={row.sender.state}
-          onChange={(state) => onUpdate(row.localId, { sender: { ...row.sender, state } })}
-          inputClassName={inputClass}
-          hideLabel
-          ariaLabel="Sender state or province"
-        />
-        <input
-          placeholder="Phone"
-          value={row.sender.phone}
-          onChange={(e) =>
-            onUpdate(row.localId, { sender: { ...row.sender, phone: e.target.value } })
-          }
-          required
-          className={inputClass}
-        />
-        <input
-          placeholder="Address (street, area)"
-          value={row.sender.address}
-          onChange={(e) =>
-            onUpdate(row.localId, { sender: { ...row.sender, address: e.target.value } })
-          }
-          required
-          className={`${inputClass} sm:col-span-3`}
-        />
-      </div>
+      {row.deliveryType === "scheduled" ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <p className={`sm:col-span-3 ${sectionLabelClass}`}>Pickup location</p>
+          <p className="sm:col-span-3 text-xs text-white/45">
+            Sender is recorded as ADMIN. Enter where the rider should pick up the package.
+          </p>
+          <select
+            value={row.pickupLocation.country}
+            onChange={(e) =>
+              onUpdate(row.localId, {
+                pickupLocation: { ...row.pickupLocation, country: e.target.value, state: "" },
+              })
+            }
+            required
+            className={inputClass}
+            aria-label="Pickup country"
+          >
+            {COUNTRY_OPTIONS.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <RegionSelect
+            id={`pickup-state-${row.localId}`}
+            countryCode={row.pickupLocation.country}
+            value={row.pickupLocation.state}
+            onChange={(state) =>
+              onUpdate(row.localId, { pickupLocation: { ...row.pickupLocation, state } })
+            }
+            inputClassName={inputClass}
+            hideLabel
+            ariaLabel="Pickup state or province"
+          />
+          <input
+            placeholder="Phone at pickup"
+            value={row.pickupLocation.phone}
+            onChange={(e) =>
+              onUpdate(row.localId, {
+                pickupLocation: { ...row.pickupLocation, phone: e.target.value },
+              })
+            }
+            required
+            className={inputClass}
+          />
+          <input
+            placeholder="Address (street, area)"
+            value={row.pickupLocation.address}
+            onChange={(e) =>
+              onUpdate(row.localId, {
+                pickupLocation: { ...row.pickupLocation, address: e.target.value },
+              })
+            }
+            required
+            className={`${inputClass} sm:col-span-3`}
+          />
+        </div>
+      ) : (
+        <p className="text-xs text-white/45">
+          Sender is recorded as <span className="font-semibold text-fuchsia-200/90">ADMIN</span>. Use pickup
+          coordinates below for instant delivery.
+        </p>
+      )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <p className={`sm:col-span-3 ${sectionLabelClass}`}>Recipient</p>
@@ -576,7 +613,7 @@ function BulkShipmentRow({
       <div className="rounded-xl border border-amber-400/25 bg-amber-500/5 p-4">
         <p className={`mb-3 ${sectionLabelClass}`}>Price calculator</p>
         <p className="mb-3 text-xs text-white/45">
-          Updates when addresses, weight range, or package size change.
+          Updates when pickup location or coordinates, recipient address, weight range, or package size change.
         </p>
         <div className="flex flex-col flex-wrap gap-3 sm:flex-row sm:items-center">
           <button
@@ -677,7 +714,6 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
       if (clientsRes.success && clientsRes.data) {
         const active = clientsRes.data.filter((c) => c.status === "active");
         setClients(active);
-        if (active.length > 0) setClientId(active[0].id);
       }
       if (ridersRes.success && ridersRes.data) {
         setRiders(ridersRes.data);
@@ -714,10 +750,6 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
     e.preventDefault();
     setError("");
     setResults(null);
-    if (!clientId) {
-      setError("Please select a client.");
-      return;
-    }
     if (!defaultRiderId) {
       setError("Please select a default rider.");
       return;
@@ -731,7 +763,7 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
     }
     setSubmitting(true);
     const res = await createAdminShipmentsBulk({
-      clientId,
+      ...(clientId.trim() ? { clientId: clientId.trim() } : {}),
       defaultRiderId,
       shipments: rows.map(rowToPayload),
     });
@@ -767,8 +799,9 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
   return (
     <div className="max-w-4xl space-y-6">
       <p className="text-sm leading-relaxed text-white/55">
-        Create multiple shipments for one client and assign riders. Use a default rider for all rows, or override per
-        shipment.
+        Create multiple shipments and assign riders. Client is optional — leave unset for an{" "}
+        <span className="font-semibold text-fuchsia-200/90">Admin account</span> shipment (sender is
+        recorded as ADMIN). Use a default rider for all rows, or override per shipment.
       </p>
 
       {results && (
@@ -831,14 +864,15 @@ export function AdminBulkShipmentCreate({ onViewList }: AdminBulkShipmentCreateP
             />
           </label>
           <label className="block">
-            <span className={labelClass}>Client</span>
+            <span className={labelClass}>
+              Client <span className="font-normal text-white/45">(optional)</span>
+            </span>
             <select
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              required
               className={inputClass}
             >
-              <option value="">Select client…</option>
+              <option value="">No client (Admin account)</option>
               {filteredClients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {getAdminClientDisplayName(c)} ({c.email})

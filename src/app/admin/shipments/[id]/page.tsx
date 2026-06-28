@@ -8,6 +8,8 @@ import {
   getAdminAvailableRiders,
   assignAdminShipmentToRider,
   canAdminAssignShipment,
+  getAdminShipmentClientLabel,
+  getAdminShipmentClientEmail,
   getClientDisplayName,
   getAdminRiderDisplayName,
   formatAdminDate,
@@ -19,6 +21,7 @@ import {
 import { formatContactLocation } from "@/lib/location-data";
 import { formatWeightRangeLabel } from "@/lib/shipment-weight-tiers";
 import { formatPackageSizeLabel } from "@/lib/shipment-size-tiers";
+import { AdminShipmentBadge, isPlaceholderContactValue } from "@/components/AdminShipmentBadge";
 
 const backLinkClass =
   "inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold text-fuchsia-100 shadow-[0_0_18px_rgba(232,121,249,0.12)] transition hover:border-fuchsia-400/35 hover:bg-fuchsia-500/10 hover:shadow-[0_0_24px_rgba(232,121,249,0.25)]";
@@ -213,9 +216,21 @@ export default function AdminShipmentDetailPage() {
         <DetailSection title="Ordered by">
           <div className={`${glassCard} grid grid-cols-1 gap-4`}>
             <dl className="contents">
-              <DetailRow label="Name" value={getClientDisplayName(shipment.client)} />
-              <DetailRow label="Email" value={shipment.client.email} />
-              <DetailRow label="Phone" value={shipment.client.phone || "—"} />
+              <DetailRow label="Name" value={getAdminShipmentClientLabel(shipment.client)} />
+              <DetailRow label="Email" value={getAdminShipmentClientEmail(shipment.client)} />
+              <DetailRow
+                label="Phone"
+                value={shipment.client?.phone?.trim() ? shipment.client.phone : "—"}
+              />
+              {shipment.createdByAdminUser ? (
+                <DetailRow
+                  label="Created by"
+                  value={getClientDisplayName(shipment.createdByAdminUser)}
+                />
+              ) : null}
+              {shipment.createdByAdminUser?.email ? (
+                <DetailRow label="Admin email" value={shipment.createdByAdminUser.email} />
+              ) : null}
             </dl>
           </div>
         </DetailSection>
@@ -282,7 +297,7 @@ export default function AdminShipmentDetailPage() {
                     </span>
                     <select value={selectedRiderId} onChange={(e) => setSelectedRiderId(e.target.value)} className={selectClass}>
                       {availableRiders.map((r) => (
-                        <option key={r.riderId} value={r.riderId}>
+                        <option key={r.riderId} value={r.riderId} className="bg-white text-neutral-900">
                           {getAdminRiderDisplayName(r)} — {r.email}
                         </option>
                       ))}
@@ -322,10 +337,19 @@ export default function AdminShipmentDetailPage() {
         <DetailSection title="Pickup & delivery">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className={`${glassCard} space-y-2`}>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-fuchsia-200/65">Sender (pickup)</h3>
-              <p className="text-sm font-semibold text-white">{shipment.senderDetails.fullName}</p>
-              <p className="text-sm text-white/55">{shipment.senderDetails.address}</p>
-              <p className="text-sm font-mono text-white/50">{shipment.senderDetails.phone}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-fuchsia-200/65">Sender (pickup)</h3>
+                {shipment.createdByAdmin ? <AdminShipmentBadge theme="admin" /> : null}
+              </div>
+              <p className="text-sm font-semibold text-white">
+                {shipment.createdByAdmin ? "ADMIN" : shipment.senderDetails.fullName}
+              </p>
+              {!isPlaceholderContactValue(shipment.senderDetails.address) ? (
+                <p className="text-sm text-white/55">{shipment.senderDetails.address}</p>
+              ) : null}
+              {!isPlaceholderContactValue(shipment.senderDetails.phone) ? (
+                <p className="text-sm font-mono text-white/50">{shipment.senderDetails.phone}</p>
+              ) : null}
             </div>
             <div className={`${glassCard} space-y-2`}>
               <h3 className="text-xs font-bold uppercase tracking-wider text-fuchsia-200/65">Recipient (drop-off)</h3>
