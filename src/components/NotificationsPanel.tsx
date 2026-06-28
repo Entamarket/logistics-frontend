@@ -37,6 +37,8 @@ function typeLabel(type: string): string {
   switch (type) {
     case "shipment_assigned":
       return "Assignment";
+    case "shipment_offered":
+      return "New offer";
     case "rider_accepted_shipment":
       return "Accepted";
     case "delivery_complete":
@@ -55,6 +57,8 @@ function typePillClass(type: string, theme: PanelTheme): string {
     switch (type) {
       case "shipment_assigned":
         return `${base} bg-purple-50 text-[#6a0068] ring-purple-200 shadow-[0_0_12px_rgba(129,0,127,0.22)]`;
+      case "shipment_offered":
+        return `${base} bg-sky-50 text-sky-900 ring-sky-200 shadow-[0_0_12px_rgba(14,165,233,0.22)]`;
       case "rider_accepted_shipment":
         return `${base} bg-fuchsia-50 text-[#81007f] ring-fuchsia-200 shadow-[0_0_12px_rgba(192,38,211,0.22)]`;
       case "delivery_complete":
@@ -71,6 +75,8 @@ function typePillClass(type: string, theme: PanelTheme): string {
     switch (type) {
       case "shipment_assigned":
         return `${base} border-sky-400/45 bg-sky-500/15 text-sky-100 shadow-[0_0_14px_rgba(56,189,248,0.22)]`;
+      case "shipment_offered":
+        return `${base} border-cyan-400/45 bg-cyan-500/15 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.22)]`;
       case "rider_accepted_shipment":
         return `${base} border-fuchsia-400/45 bg-fuchsia-500/15 text-fuchsia-100 shadow-[0_0_14px_rgba(232,121,249,0.22)]`;
       case "delivery_complete":
@@ -85,6 +91,8 @@ function typePillClass(type: string, theme: PanelTheme): string {
   switch (type) {
     case "shipment_assigned":
       return `${base} bg-sky-100 text-sky-800 ring-1 ring-sky-200/80 shadow-[0_0_10px_rgba(14,165,233,0.3)]`;
+    case "shipment_offered":
+      return `${base} bg-cyan-100 text-cyan-900 ring-1 ring-cyan-200/80 shadow-[0_0_10px_rgba(34,211,238,0.3)]`;
     case "rider_accepted_shipment":
       return `${base} bg-violet-100 text-violet-800 ring-1 ring-violet-200/80 shadow-[0_0_10px_rgba(139,92,246,0.3)]`;
     case "delivery_complete":
@@ -115,6 +123,8 @@ function accentBarClass(type: string, read: boolean, theme: PanelTheme): string 
     switch (type) {
       case "shipment_assigned":
         return "h-0.5 w-full bg-gradient-to-r from-transparent via-sky-400 to-blue-400 shadow-[0_0_12px_rgba(56,189,248,0.6)]";
+      case "shipment_offered":
+        return "h-0.5 w-full bg-gradient-to-r from-transparent via-cyan-400 to-sky-400 shadow-[0_0_12px_rgba(34,211,238,0.55)]";
       case "delivery_complete":
         return "h-0.5 w-full bg-gradient-to-r from-transparent via-emerald-400 to-cyan-400 shadow-[0_0_12px_rgba(52,211,153,0.6)]";
       case "complaint_submitted":
@@ -127,6 +137,8 @@ function accentBarClass(type: string, read: boolean, theme: PanelTheme): string 
   switch (type) {
     case "shipment_assigned":
       return "h-0.5 w-full bg-gradient-to-r from-transparent via-sky-400 to-blue-400 shadow-[0_0_12px_rgba(14,165,233,0.7)]";
+    case "shipment_offered":
+      return "h-0.5 w-full bg-gradient-to-r from-transparent via-cyan-400 to-sky-400 shadow-[0_0_12px_rgba(34,211,238,0.65)]";
     case "delivery_complete":
       return "h-0.5 w-full bg-gradient-to-r from-transparent via-emerald-400 to-cyan-400 shadow-[0_0_12px_rgba(16,185,129,0.7)]";
     case "complaint_submitted":
