@@ -145,6 +145,11 @@ export interface AdminShipmentDetail extends AdminShipmentListItem {
   declinedRiderCount: number;
   createdByAdmin?: boolean;
   createdByAdminUser?: AdminClient | null;
+  deliveryProofUploadedAt?: string;
+  senderConfirmedReceipt?: boolean;
+  senderConfirmedReceiptAt?: string;
+  hasDeliveryProof?: boolean;
+  deliveryProofImageUrl?: string | null;
   updatedAt: string;
 }
 

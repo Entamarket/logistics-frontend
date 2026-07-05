@@ -9,6 +9,8 @@ import {
   rejectRiderShipmentOffer,
   markShipmentPickedUp,
   markShipmentInTransit,
+  uploadDeliveryProof,
+  shipmentHasDeliveryProof,
   type ShipmentData,
 } from "@/lib/shipment-api";
 import { getMyRiderProfile, updateMyRiderLocation } from "@/lib/riders-api";
@@ -72,7 +74,7 @@ export default function RiderActiveDeliveryPage() {
   const [error, setError] = useState("");
   const [actionId, setActionId] = useState<string | null>(null);
   const [actionKind, setActionKind] = useState<
-    "deliver" | "accept" | "reject" | "picked_up" | "in_transit" | null
+    "deliver" | "accept" | "reject" | "picked_up" | "in_transit" | "upload_proof" | null
   >(null);
   const [actionMessage, setActionMessage] = useState("");
   const [mePos, setMePos] = useState<{ lat: number; lng: number } | null>(null);
@@ -155,6 +157,25 @@ export default function RiderActiveDeliveryPage() {
       watchIdRef.current = null;
     };
   }, [shipments.length]);
+
+  async function handleUploadProof(id: string, file: File) {
+    setActionMessage("");
+    setActionId(id);
+    setActionKind("upload_proof");
+    const res = await uploadDeliveryProof(id, file);
+    setActionId(null);
+    setActionKind(null);
+    if (res.success) {
+      setActionMessage("Delivery photo uploaded.");
+      await load();
+      return;
+    }
+    if (res.message?.toLowerCase().includes("auth")) {
+      router.replace("/auth/login");
+      return;
+    }
+    setActionMessage(res.message || "Could not upload photo.");
+  }
 
   async function handleMarkDelivered(id: string) {
     setActionMessage("");
@@ -284,7 +305,9 @@ export default function RiderActiveDeliveryPage() {
   }
 
   const actionIsSuccess =
-    actionMessage.startsWith("Marked") || actionMessage.startsWith("Offer accepted");
+    actionMessage.startsWith("Marked") ||
+    actionMessage.startsWith("Offer accepted") ||
+    actionMessage.startsWith("Delivery photo uploaded");
 
   return (
     <RiderShell className="max-w-4xl">
@@ -320,7 +343,13 @@ export default function RiderActiveDeliveryPage() {
                 actionKind === "accept" ||
                 actionKind === "reject" ||
                 actionKind === "picked_up" ||
-                actionKind === "in_transit");
+                actionKind === "in_transit" ||
+                actionKind === "upload_proof");
+            const canDeliver =
+              s.status === "rider_assigned" ||
+              s.status === "picked_up" ||
+              s.status === "in_transit";
+            const hasProof = shipmentHasDeliveryProof(s);
             const pickup = toMapLatLng(s.pickupLongitude, s.pickupLatitude);
             const recipient = toMapLatLng(s.recipientLongitude, s.recipientLatitude);
             const leg = riderMapActiveLeg(s.status);
@@ -414,6 +443,62 @@ export default function RiderActiveDeliveryPage() {
                   </p>
                   {s.packageDetails.note ? <p className="mt-1">Note: {s.packageDetails.note}</p> : null}
                 </div>
+                {canDeliver && !awaiting ? (
+                  <div className="space-y-3 rounded-xl border border-purple-200/80 bg-purple-50/40 p-4">
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#6a0068]">
+                      Delivery proof
+                    </p>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {s.deliveryProofUploadedAt || s.deliveryProofImageUrl ? (
+                        <span className="rounded-full bg-emerald-100 px-2.5 py-1 font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                          Photo uploaded
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-600 ring-1 ring-slate-200">
+                          No photo yet
+                        </span>
+                      )}
+                      {s.senderConfirmedReceipt ? (
+                        <span className="rounded-full bg-sky-100 px-2.5 py-1 font-semibold text-sky-800 ring-1 ring-sky-200">
+                          Sender confirmed
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-600 ring-1 ring-slate-200">
+                          Awaiting sender confirm
+                        </span>
+                      )}
+                    </div>
+                    {s.deliveryProofImageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={s.deliveryProofImageUrl}
+                        alt="Delivery proof"
+                        className="max-h-40 rounded-lg border border-purple-200 object-cover"
+                      />
+                    ) : null}
+                    <label className="block">
+                      <span className="sr-only">Upload delivery photo</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        disabled={busy}
+                        className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-[#81007f] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#6a0068] disabled:opacity-50"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) void handleUploadProof(s._id, file);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    {!hasProof ? (
+                      <p className="text-xs text-amber-800">
+                        Upload a photo of the recipient with the package, or ask the sender to confirm
+                        receipt before marking delivered.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
                 {awaiting ? (
                   <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                     <button
@@ -458,8 +543,13 @@ export default function RiderActiveDeliveryPage() {
                     <button
                       type="button"
                       onClick={() => handleMarkDelivered(s._id)}
-                      disabled={busy}
-                      className={`${riderBtnAccent} w-full sm:w-auto`}
+                      disabled={busy || !hasProof}
+                      title={
+                        !hasProof
+                          ? "Upload a delivery photo or wait for sender confirmation first"
+                          : undefined
+                      }
+                      className={`${riderBtnAccent} w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-50`}
                     >
                       {busy && actionKind === "deliver" ? "Updating…" : "Mark as delivered"}
                     </button>

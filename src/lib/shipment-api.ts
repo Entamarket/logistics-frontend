@@ -1,4 +1,4 @@
-import { apiGet, apiPatch, apiPost } from "./api";
+import { apiGet, apiPatch, apiPost, API_BASE, type ApiResponse } from "./api";
 
 export interface ContactDetailsPayload {
   fullName: string;
@@ -70,6 +70,11 @@ export interface ShipmentData {
   updatedAt: string;
   /** Set when an admin created the shipment on behalf of a client. */
   createdByAdmin?: boolean;
+  deliveryProofUploadedAt?: string;
+  senderConfirmedReceipt?: boolean;
+  senderConfirmedReceiptAt?: string;
+  hasDeliveryProof?: boolean;
+  deliveryProofImageUrl?: string | null;
 }
 
 export async function getShipments() {
@@ -200,4 +205,32 @@ export async function markShipmentPickedUp(shipmentId: string) {
 
 export async function markShipmentInTransit(shipmentId: string) {
   return apiPatch<ShipmentData>(`/api/shipments/${shipmentId}/in-transit`, {});
+}
+
+export function shipmentHasDeliveryProof(s: ShipmentData): boolean {
+  return Boolean(s.hasDeliveryProof);
+}
+
+export async function uploadDeliveryProof(
+  shipmentId: string,
+  file: File
+): Promise<ApiResponse<ShipmentData>> {
+  const form = new FormData();
+  form.append("photo", file);
+  const url = `${API_BASE}/api/shipments/${encodeURIComponent(shipmentId)}/delivery-proof`;
+  const res = await fetch(url, {
+    method: "POST",
+    body: form,
+    credentials: "include",
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const body = json as { message?: string };
+    return { success: false, message: body.message || res.statusText || "Upload failed" };
+  }
+  return json as ApiResponse<ShipmentData>;
+}
+
+export async function confirmShipmentReceipt(shipmentId: string) {
+  return apiPatch<ShipmentData>(`/api/shipments/${shipmentId}/confirm-receipt`, {});
 }

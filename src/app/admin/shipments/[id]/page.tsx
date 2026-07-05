@@ -334,6 +334,66 @@ export default function AdminShipmentDetailPage() {
           </div>
         </DetailSection>
 
+        <DetailSection title="Delivery proof">
+          <div className={`${glassCard} grid grid-cols-1 gap-4 sm:grid-cols-2`}>
+            <dl className="contents">
+              <DetailRow
+                label="Proof status"
+                value={
+                  shipment.hasDeliveryProof ? (
+                    <span className="text-emerald-200">At least one proof on file</span>
+                  ) : (
+                    <span className="text-white/45">None yet</span>
+                  )
+                }
+              />
+              <DetailRow
+                label="Photo uploaded"
+                value={
+                  shipment.deliveryProofUploadedAt ? (
+                    formatAdminDate(shipment.deliveryProofUploadedAt)
+                  ) : (
+                    <span className="text-white/45">—</span>
+                  )
+                }
+              />
+              <DetailRow
+                label="Sender confirmed"
+                value={
+                  shipment.senderConfirmedReceipt ? (
+                    <>
+                      Yes
+                      {shipment.senderConfirmedReceiptAt
+                        ? ` · ${formatAdminDate(shipment.senderConfirmedReceiptAt)}`
+                        : ""}
+                    </>
+                  ) : (
+                    <span className="text-white/45">No</span>
+                  )
+                }
+              />
+            </dl>
+            {shipment.deliveryProofImageUrl ? (
+              <div className="sm:col-span-2">
+                <p className="text-xs font-medium uppercase tracking-wider text-white/40">Proof photo</p>
+                <a
+                  href={shipment.deliveryProofImageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-block"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={shipment.deliveryProofImageUrl}
+                    alt="Delivery proof"
+                    className="max-h-56 rounded-xl border border-white/15 object-cover shadow-lg"
+                  />
+                </a>
+              </div>
+            ) : null}
+          </div>
+        </DetailSection>
+
         <DetailSection title="Pickup & delivery">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className={`${glassCard} space-y-2`}>

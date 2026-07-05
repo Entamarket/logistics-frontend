@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getShipments, type ShipmentData } from "@/lib/shipment-api";
+import { getShipments, confirmShipmentReceipt, type ShipmentData } from "@/lib/shipment-api";
 import { formatContactLocation } from "@/lib/location-data";
 import { ClientActiveShipmentMap } from "@/components/maps/ClientActiveShipmentMap";
 
 const TERMINAL_STATUSES = new Set(["delivered", "cancelled"]);
+
+const CONFIRMABLE_STATUSES = new Set(["rider_assigned", "picked_up", "in_transit"]);
 
 function isActiveStatus(status: string) {
   return !TERMINAL_STATUSES.has(status);
@@ -86,6 +88,8 @@ export default function ActiveShipmentPage() {
   const [shipments, setShipments] = useState<ShipmentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [confirmMessage, setConfirmMessage] = useState("");
 
   const load = useCallback(async () => {
     setError("");
@@ -112,6 +116,23 @@ export default function ActiveShipmentPage() {
       cancelled = true;
     };
   }, [load]);
+
+  async function handleConfirmReceipt(shipmentId: string) {
+    setConfirmMessage("");
+    setConfirmingId(shipmentId);
+    const res = await confirmShipmentReceipt(shipmentId);
+    setConfirmingId(null);
+    if (res.success) {
+      setConfirmMessage("Receipt confirmed. Your rider can now mark the delivery complete.");
+      await load();
+      return;
+    }
+    if (res.message?.toLowerCase().includes("auth")) {
+      router.replace("/auth/login");
+      return;
+    }
+    setConfirmMessage(res.message || "Could not confirm receipt.");
+  }
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -147,6 +168,15 @@ export default function ActiveShipmentPage() {
           role="alert"
         >
           {error}
+        </div>
+      )}
+
+      {confirmMessage && (
+        <div
+          className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 shadow-sm"
+          role="status"
+        >
+          {confirmMessage}
         </div>
       )}
 
@@ -214,6 +244,33 @@ export default function ActiveShipmentPage() {
                     <ClientActiveShipmentMap shipment={s} />
                   </div>
                 )}
+
+                {CONFIRMABLE_STATUSES.has(s.status) ? (
+                  <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 shadow-sm">
+                    <p className="text-sm font-semibold text-emerald-900">Delivery confirmation</p>
+                    <p className="mt-1 text-xs leading-relaxed text-emerald-800/90">
+                      Confirm when the recipient has received the package. This lets your rider complete the
+                      delivery without uploading a photo.
+                    </p>
+                    {s.senderConfirmedReceipt ? (
+                      <p className="mt-3 inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                        Confirmed
+                        {s.senderConfirmedReceiptAt
+                          ? ` · ${formatDate(s.senderConfirmedReceiptAt)}`
+                          : ""}
+                      </p>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void handleConfirmReceipt(s._id)}
+                        disabled={confirmingId === s._id}
+                        className="mt-3 inline-flex min-h-[40px] items-center justify-center rounded-xl bg-[#81007f] px-4 text-sm font-semibold text-white shadow-md shadow-purple-900/20 transition hover:bg-[#6a0068] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {confirmingId === s._id ? "Confirming…" : "Confirm recipient received package"}
+                      </button>
+                    )}
+                  </div>
+                ) : null}
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-amber-100/90 bg-gradient-to-br from-amber-50/90 to-orange-50/40 p-3.5 shadow-sm">
