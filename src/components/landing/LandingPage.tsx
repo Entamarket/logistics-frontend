@@ -1,13 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { getMyProfile } from "@/lib/auth-api";
 import { ContactSection } from "./ContactSection";
 import { HeroShipmentTracker } from "./HeroShipmentTracker";
 import { LandingBrand } from "./LandingBrand";
 import { LandingFooter } from "./LandingFooter";
 import { LandingImage } from "./LandingImage";
 import { LANDING_IMAGES } from "./landing-images";
+
+function homePathForRole(role: string): string {
+  if (role === "admin") return "/admin";
+  if (role === "rider") return "/rider";
+  return "/dashboard";
+}
 
 function RevealSection({
   id,
@@ -217,7 +224,29 @@ const MARQUEE_ITEMS = [
   "Admin operations",
 ];
 
-export function LandingPage() {
+export function LandingPage({ initialRole = null }: { initialRole?: string | null }) {
+  const [dashboardHref, setDashboardHref] = useState<string | null>(
+    initialRole ? homePathForRole(initialRole) : null
+  );
+
+  useEffect(() => {
+    // Server already confirmed a valid session from the cookie; skip the extra round-trip.
+    if (initialRole) return;
+    let cancelled = false;
+    (async () => {
+      const res = await getMyProfile();
+      if (cancelled) return;
+      if (res.success && res.data?.role) {
+        setDashboardHref(homePathForRole(res.data.role));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialRole]);
+
+  const isLoggedIn = dashboardHref != null;
+
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[#faf8fb] text-neutral-900">
       {/* Background mesh */}
@@ -247,17 +276,19 @@ export function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {!isLoggedIn ? (
+              <Link
+                href="/auth/login"
+                className="hidden rounded-xl px-4 py-2 text-sm font-semibold text-[#81007f] transition hover:bg-[#81007f]/5 sm:inline-flex"
+              >
+                Log in
+              </Link>
+            ) : null}
             <Link
-              href="/auth/login"
-              className="hidden rounded-xl px-4 py-2 text-sm font-semibold text-[#81007f] transition hover:bg-[#81007f]/5 sm:inline-flex"
-            >
-              Log in
-            </Link>
-            <Link
-              href="/auth/signup"
+              href={isLoggedIn ? dashboardHref : "/auth/signup"}
               className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#6a0068] to-[#81007f] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_4px_24px_rgba(129,0,127,0.4)] ring-1 ring-white/20 transition hover:shadow-[0_8px_32px_rgba(129,0,127,0.5)] sm:px-5"
             >
-              <span className="relative z-10">Get started</span>
+              <span className="relative z-10">{isLoggedIn ? "Dashboard" : "Get started"}</span>
               <span
                 className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent"
                 style={{ animation: "landing-shimmer 3s ease-in-out infinite" }}

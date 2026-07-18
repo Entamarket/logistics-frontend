@@ -62,9 +62,32 @@ export async function updateRiderStatus(id: string, status: "active" | "suspende
   return apiPatch<RiderData>(`/api/riders/${id}/status`, { status });
 }
 
+export interface RiderDailyEarningsBucket {
+  date: string;
+  label: string;
+  deliveredCount: number;
+  earningsNgn: number;
+}
+
+export interface RiderEarningsSummary {
+  ratePerDelivery: number;
+  days: number;
+  timezone: string;
+  daily: RiderDailyEarningsBucket[];
+  periodDeliveredCount: number;
+  periodEarningsNgn: number;
+  allTimeDeliveredCount: number;
+  allTimeEarningsNgn: number;
+}
+
 /** Rider-only: current rider profile (includes location when set). */
 export async function getMyRiderProfile() {
   return apiGet<RiderData>("/api/riders/me");
+}
+
+/** Rider-only: daily and all-time earnings (fixed rate per delivered shipment). */
+export async function getMyRiderEarnings(days = 7) {
+  return apiGet<RiderEarningsSummary>(`/api/riders/me/earnings?days=${days}`);
 }
 
 /** Rider-only: update current GPS position (GeoJSON: longitude, latitude). */

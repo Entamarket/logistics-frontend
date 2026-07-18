@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { submitContactMessage } from "@/lib/contact-api";
 
 const CONTACT_EMAIL =
   process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "support@entamarket.com";
@@ -12,35 +13,49 @@ const inputClass =
 export function ContactSection() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+    setSent(false);
 
     const trimmedName = name.trim();
     const trimmedEmail = email.trim();
-    const trimmedSubject = subject.trim() || "Entamarket Logistics inquiry";
+    const trimmedPhone = phone.trim();
+    const trimmedSubject = subject.trim();
     const trimmedMessage = message.trim();
 
-    if (!trimmedName || !trimmedEmail || !trimmedMessage) {
-      setError("Please fill in your name, email, and message.");
+    if (!trimmedName || !trimmedEmail || !trimmedPhone || !trimmedMessage) {
+      setError("Please fill in your name, email, phone number, and message.");
       return;
     }
 
-    const body = [
-      `Name: ${trimmedName}`,
-      `Email: ${trimmedEmail}`,
-      "",
-      trimmedMessage,
-    ].join("\n");
+    setLoading(true);
+    const res = await submitContactMessage({
+      name: trimmedName,
+      email: trimmedEmail,
+      phone: trimmedPhone,
+      subject: trimmedSubject || undefined,
+      message: trimmedMessage,
+    });
+    setLoading(false);
 
-    const mailto = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(trimmedSubject)}&body=${encodeURIComponent(body)}`;
+    if (!res.success) {
+      setError(res.message || "Could not send your message. Please try again.");
+      return;
+    }
 
-    window.location.href = mailto;
+    setName("");
+    setEmail("");
+    setPhone("");
+    setSubject("");
+    setMessage("");
     setSent(true);
   }
 
@@ -173,7 +188,7 @@ export function ContactSection() {
             Send us a message
           </h3>
           <p className="mt-1 text-sm text-neutral-500">
-            Your email app will open with your message ready to send.
+            Your message is delivered to our team inbox and email. We typically reply within one business day.
           </p>
 
           {error && (
@@ -190,11 +205,7 @@ export function ContactSection() {
               className="mt-5 rounded-xl border border-emerald-200/80 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
               role="status"
             >
-              If your email app didn&apos;t open, write to us at{" "}
-              <a href={`mailto:${CONTACT_EMAIL}`} className="font-semibold underline">
-                {CONTACT_EMAIL}
-              </a>
-              .
+              Thanks — your message was sent. Our team will get back to you soon.
             </div>
           )}
 
@@ -210,6 +221,7 @@ export function ContactSection() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                disabled={loading}
                 className={inputClass}
                 placeholder="Your name"
               />
@@ -225,8 +237,25 @@ export function ContactSection() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={loading}
                 className={inputClass}
                 placeholder="you@company.com"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="contact-phone" className="block text-sm font-semibold text-neutral-800">
+                Phone number
+              </label>
+              <input
+                id="contact-phone"
+                type="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+                disabled={loading}
+                className={inputClass}
+                placeholder="+234 801 234 5678"
               />
             </div>
             <div className="sm:col-span-2">
@@ -238,6 +267,7 @@ export function ContactSection() {
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
+                disabled={loading}
                 className={inputClass}
                 placeholder="How can we help?"
               />
@@ -252,6 +282,7 @@ export function ContactSection() {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 required
+                disabled={loading}
                 className={`${inputClass} min-h-[120px] resize-y`}
                 placeholder="Tell us about your shipment, partnership idea, or question..."
               />
@@ -260,9 +291,10 @@ export function ContactSection() {
 
           <button
             type="submit"
-            className="mt-6 inline-flex min-h-[48px] w-full items-center justify-center rounded-2xl bg-gradient-to-r from-[#6a0068] to-[#81007f] px-6 text-base font-semibold text-white shadow-[0_8px_28px_rgba(129,0,127,0.35)] ring-1 ring-white/20 transition hover:shadow-[0_12px_36px_rgba(129,0,127,0.45)] sm:w-auto sm:px-10"
+            disabled={loading}
+            className="mt-6 inline-flex min-h-[48px] w-full items-center justify-center rounded-2xl bg-gradient-to-r from-[#6a0068] to-[#81007f] px-6 text-base font-semibold text-white shadow-[0_8px_28px_rgba(129,0,127,0.35)] ring-1 ring-white/20 transition hover:shadow-[0_12px_36px_rgba(129,0,127,0.45)] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-10"
           >
-            Send message
+            {loading ? "Sending…" : "Send message"}
           </button>
         </form>
       </div>

@@ -8,6 +8,7 @@ import {
   getAdminAvailableRiders,
   assignAdminShipmentToRider,
   canAdminAssignShipment,
+  isAdminReassignment,
   getAdminShipmentClientLabel,
   getAdminShipmentClientEmail,
   getClientDisplayName,
@@ -90,6 +91,7 @@ export default function AdminShipmentDetailPage() {
   }, [id]);
 
   const canAssign = shipment ? canAdminAssignShipment(shipment.status) : false;
+  const isReassign = shipment ? isAdminReassignment(shipment.status) : false;
 
   useEffect(() => {
     if (!canAssign) {
@@ -104,13 +106,16 @@ export default function AdminShipmentDetailPage() {
       setRidersLoading(false);
       if (res.success && res.data) {
         setAvailableRiders(res.data);
-        if (res.data.length > 0) setSelectedRiderId(res.data[0].riderId);
+        const currentRiderId = shipment?.rider?.riderId;
+        const candidates = res.data.filter((r) => r.riderId !== currentRiderId);
+        if (candidates.length > 0) setSelectedRiderId(candidates[0].riderId);
+        else setSelectedRiderId("");
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [canAssign, shipment?.status]);
+  }, [canAssign, shipment?.status, shipment?.rider?.riderId]);
 
   async function handleAssign(e: React.FormEvent) {
     e.preventDefault();
@@ -275,9 +280,13 @@ export default function AdminShipmentDetailPage() {
                 onSubmit={handleAssign}
                 className="space-y-4 rounded-xl border border-fuchsia-500/25 bg-fuchsia-950/20 p-4 shadow-[0_0_28px_rgba(129,0,127,0.15),inset_0_1px_0_rgba(255,255,255,0.05)]"
               >
-                <p className="text-sm font-semibold text-white/95">Assign to available rider</p>
+                <p className="text-sm font-semibold text-white/95">
+                  {isReassign ? "Reassign to another rider" : "Assign to available rider"}
+                </p>
                 <p className="text-xs leading-relaxed text-white/50">
-                  The rider will receive a notification and must accept the offer before delivery proceeds.
+                  {isReassign
+                    ? "The current rider will lose this job immediately. The replacement rider must accept the offer; after acceptance, the shipment resumes at its previous stage and the new rider is credited for the delivery."
+                    : "The rider will receive a notification and must accept the offer before delivery proceeds."}
                 </p>
                 {ridersLoading && (
                   <div className="flex items-center gap-2 text-sm text-white/60">
@@ -296,7 +305,9 @@ export default function AdminShipmentDetailPage() {
                       Select rider
                     </span>
                     <select value={selectedRiderId} onChange={(e) => setSelectedRiderId(e.target.value)} className={selectClass}>
-                      {availableRiders.map((r) => (
+                      {availableRiders
+                        .filter((r) => r.riderId !== shipment.rider?.riderId)
+                        .map((r) => (
                         <option key={r.riderId} value={r.riderId} className="bg-white text-neutral-900">
                           {getAdminRiderDisplayName(r)} — {r.email}
                         </option>
@@ -306,10 +317,20 @@ export default function AdminShipmentDetailPage() {
                 )}
                 <button
                   type="submit"
-                  disabled={assignLoading || ridersLoading || availableRiders.length === 0}
+                  disabled={
+                    assignLoading ||
+                    ridersLoading ||
+                    availableRiders.filter((r) => r.riderId !== shipment.rider?.riderId).length === 0
+                  }
                   className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-gradient-to-r from-[#81007f] to-fuchsia-600 px-5 text-sm font-semibold text-white shadow-[0_0_28px_rgba(129,0,127,0.45)] ring-1 ring-white/15 transition hover:shadow-[0_0_36px_rgba(217,70,239,0.5)] focus:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50"
                 >
-                  {assignLoading ? "Assigning…" : "Assign rider"}
+                  {assignLoading
+                    ? isReassign
+                      ? "Reassigning…"
+                      : "Assigning…"
+                    : isReassign
+                      ? "Reassign rider"
+                      : "Assign rider"}
                 </button>
               </form>
             )}

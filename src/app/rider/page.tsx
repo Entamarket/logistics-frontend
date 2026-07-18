@@ -3,9 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { getRiderAddressBook, getRiderShipments, type ShipmentData } from "@/lib/shipment-api";
+import { getMyRiderEarnings, type RiderEarningsSummary } from "@/lib/riders-api";
 import { useNotifications } from "@/contexts/NotificationContext";
 
 const THEME = "#81007f";
+
+function formatNaira(amount: number): string {
+  return `₦${amount.toLocaleString("en-NG")}`;
+}
 
 const ACTIVE_STATUSES = new Set([
   "awaiting_rider_response",
@@ -53,13 +58,26 @@ export default function RiderOverviewPage() {
   const { unreadCount } = useNotifications();
   const [shipments, setShipments] = useState<ShipmentData[]>([]);
   const [addressCount, setAddressCount] = useState(0);
+  const [earnings, setEarnings] = useState<RiderEarningsSummary | null>(null);
+  const [earningsError, setEarningsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
   const load = useCallback(async () => {
-    const [shipRes, bookRes] = await Promise.all([getRiderShipments("all"), getRiderAddressBook()]);
+    const [shipRes, bookRes, earningsRes] = await Promise.all([
+      getRiderShipments("all"),
+      getRiderAddressBook(),
+      getMyRiderEarnings(7),
+    ]);
     if (shipRes.success && shipRes.data) setShipments(shipRes.data);
     if (bookRes.success && bookRes.data) setAddressCount(bookRes.data.length);
+    if (earningsRes.success && earningsRes.data) {
+      setEarnings(earningsRes.data);
+      setEarningsError(null);
+    } else {
+      setEarnings(null);
+      setEarningsError(earningsRes.message || "Could not load earnings");
+    }
   }, []);
 
   useEffect(() => {
@@ -99,6 +117,10 @@ export default function RiderOverviewPage() {
     () => monthlyDeliveredCounts.reduce((a, b) => a + b, 0),
     [monthlyDeliveredCounts]
   );
+
+  const earningsDays = earnings?.daily ?? [];
+  const earningsChartMax = Math.max(1, ...earningsDays.map((d) => d.earningsNgn));
+  const hasAnyPeriodEarnings = (earnings?.periodEarningsNgn ?? 0) > 0;
 
   const folderCards = useMemo(() => {
     const cards = [
@@ -246,6 +268,92 @@ export default function RiderOverviewPage() {
                   {monthLabels.map((label, i) => (
                     <span key={`lbl-${i}-${label}`} className="w-0 flex-1 truncate text-center" title={label}>
                       {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-sm sm:p-6">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h2 className="text-base font-semibold text-neutral-900">Daily earnings</h2>
+                <p className="mt-1 text-xs text-neutral-500">
+                  Earnings from completed deliveries (last 7 days, Africa/Lagos). Each delivery earns a fixed{" "}
+                  {formatNaira(earnings?.ratePerDelivery ?? 500)}.
+                </p>
+              </div>
+              <div className="text-right text-xs font-medium text-neutral-600">
+                <p className="tabular-nums">
+                  7-day total:{" "}
+                  <span className="text-[#81007f]">
+                    {earnings ? formatNaira(earnings.periodEarningsNgn) : "—"}
+                  </span>
+                </p>
+                <p className="mt-0.5 tabular-nums text-neutral-500">
+                  Rate: {formatNaira(earnings?.ratePerDelivery ?? 500)} / delivery
+                </p>
+              </div>
+            </div>
+
+            {loading ? (
+              <p className="mt-8 text-sm text-neutral-500">Loading earnings…</p>
+            ) : earningsError ? (
+              <p className="mt-8 text-sm text-red-600" role="alert">
+                {earningsError}
+              </p>
+            ) : !earnings || earningsDays.length === 0 ? (
+              <p className="mt-8 text-sm text-neutral-500">No earnings data available yet.</p>
+            ) : (
+              <div
+                className="mt-6"
+                role="img"
+                aria-label={`Bar chart of daily earnings over the last 7 days. Period total ${formatNaira(earnings.periodEarningsNgn)} from ${earnings.periodDeliveredCount} deliveries.`}
+              >
+                {!hasAnyPeriodEarnings ? (
+                  <p className="mb-4 text-sm text-neutral-500">
+                    No completed deliveries in the last 7 days. Bars show ₦0 for each day.
+                  </p>
+                ) : null}
+                <div className="flex h-52 items-end gap-1.5 sm:gap-2">
+                  {earningsDays.map((day) => {
+                    const pct =
+                      earningsChartMax > 0 ? (day.earningsNgn / earningsChartMax) * 100 : 0;
+                    const tip = `${day.date}: ${day.deliveredCount} completed, ${formatNaira(day.earningsNgn)}`;
+                    return (
+                      <div
+                        key={day.date}
+                        className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1"
+                      >
+                        <span
+                          className="max-w-full truncate text-[10px] font-semibold tabular-nums text-neutral-800 sm:text-[11px]"
+                          title={tip}
+                        >
+                          {formatNaira(day.earningsNgn)}
+                        </span>
+                        <div className="flex h-44 w-full flex-col justify-end rounded-t-md bg-neutral-100/90">
+                          <div
+                            className="w-full min-h-0 rounded-t-md bg-gradient-to-t from-[#6a0068] to-[#81007f] shadow-sm transition-[height] duration-300"
+                            style={{
+                              height: `${Math.max(pct, day.earningsNgn > 0 ? 6 : 0)}%`,
+                            }}
+                            title={tip}
+                            aria-label={tip}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-2 flex justify-between gap-0.5 text-[9px] font-medium text-neutral-500 sm:text-[10px]">
+                  {earningsDays.map((day) => (
+                    <span
+                      key={`earn-lbl-${day.date}`}
+                      className="w-0 flex-1 truncate text-center"
+                      title={`${day.label} (${day.date})`}
+                    >
+                      {day.label}
                     </span>
                   ))}
                 </div>

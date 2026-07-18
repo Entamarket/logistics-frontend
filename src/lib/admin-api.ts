@@ -276,10 +276,20 @@ const ADMIN_ASSIGNABLE_STATUSES = new Set([
   "scheduled",
   "searching_rider",
   "awaiting_rider_response",
+  "rider_assigned",
+  "picked_up",
+  "in_transit",
 ]);
+
+/** Statuses where a rider is already on the job — admin assign is a reassignment. */
+const ADMIN_REASSIGN_STATUSES = new Set(["rider_assigned", "picked_up", "in_transit"]);
 
 export function canAdminAssignShipment(status: string): boolean {
   return ADMIN_ASSIGNABLE_STATUSES.has(status);
+}
+
+export function isAdminReassignment(status: string): boolean {
+  return ADMIN_REASSIGN_STATUSES.has(status);
 }
 
 export async function getAdminAvailableRiders() {

@@ -21,7 +21,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen min-h-[100dvh] bg-[#ffffff] flex flex-col safe-area-inset">
-      <TopBar brandHref="/dashboard" onMenuClick={() => setSidebarOpen((o) => !o)} />
+      <TopBar brandHref="/" onMenuClick={() => setSidebarOpen((o) => !o)} />
       <div className="flex flex-1 pt-14">
         <Sidebar
           navItems={clientNavItems}

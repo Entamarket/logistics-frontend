@@ -12,6 +12,7 @@ const adminNavItems = [
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/financial-reports", label: "Financial reports" },
   { href: "/admin/complaints", label: "Complaints" },
+  { href: "/admin/messages", label: "Messages" },
   { href: "/admin/notifications", label: "Notifications" },
   { href: "/admin/settings", label: "Settings" },
 ];
