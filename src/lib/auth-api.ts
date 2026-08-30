@@ -39,6 +39,7 @@ export interface ResetPasswordBody {
 export const AUTH_PURPOSES = {
   EMAIL_VERIFICATION: "Email verification",
   PASSWORD_RESET: "Password reset",
+  EMAIL_CHANGE: "Email change",
 } as const;
 
 export async function signUp(body: SignUpBody) {
@@ -97,4 +98,20 @@ export async function getMyProfile() {
 
 export async function updateMyProfile(body: UpdateProfileBody) {
   return apiPatch<UserProfile>("/api/auth/me", body);
+}
+
+export async function requestEmailChange(body: { newEmail: string; currentPassword: string }) {
+  return apiPost<{ pendingEmail: string }>("/api/auth/me/email/request", body);
+}
+
+export async function confirmEmailChange(body: { otp: string }) {
+  return apiPost<UserProfile>("/api/auth/me/email/confirm", body);
+}
+
+export async function resendEmailChangeOTP() {
+  return apiPost<{ pendingEmail: string }>("/api/auth/me/email/resend", {});
+}
+
+export async function changePassword(body: { currentPassword: string; newPassword: string }) {
+  return apiPost<unknown>("/api/auth/me/password", body);
 }

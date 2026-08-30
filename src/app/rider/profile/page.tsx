@@ -7,6 +7,9 @@ import {
   updateMyRiderAvailability,
   updateMyRiderLocation,
 } from "@/lib/riders-api";
+import { getMyProfile } from "@/lib/auth-api";
+import { ChangeEmailSection } from "@/components/ChangeEmailSection";
+import { ChangePasswordSection } from "@/components/ChangePasswordSection";
 import {
   RiderErrorAlert,
   RiderLoadingBlock,
@@ -52,6 +55,7 @@ export default function RiderProfilePage() {
   const [availabilitySaving, setAvailabilitySaving] = useState(false);
   const [availabilityMessage, setAvailabilityMessage] = useState("");
   const [availabilityError, setAvailabilityError] = useState("");
+  const [accountEmail, setAccountEmail] = useState("");
 
   const canGoAvailable = riderStatus === "active" && isVerified;
 
@@ -70,21 +74,27 @@ export default function RiderProfilePage() {
     async function load() {
       setLoadError("");
       setLoadingProfile(true);
-      const res = await getMyRiderProfile();
+      const [riderRes, profileRes] = await Promise.all([getMyRiderProfile(), getMyProfile()]);
       if (cancelled) return;
       setLoadingProfile(false);
-      if (res.success && res.data) {
-        applyLocationFromRider(res.data.location?.coordinates);
-        setIsAvailable(res.data.isAvailable);
-        setRiderStatus(res.data.status);
-        setIsVerified(res.data.isVerified);
-        return;
-      }
-      if (res.message?.toLowerCase().includes("rider access") || res.message?.toLowerCase().includes("auth")) {
+      if (riderRes.success && riderRes.data) {
+        applyLocationFromRider(riderRes.data.location?.coordinates);
+        setIsAvailable(riderRes.data.isAvailable);
+        setRiderStatus(riderRes.data.status);
+        setIsVerified(riderRes.data.isVerified);
+      } else if (
+        riderRes.message?.toLowerCase().includes("rider access") ||
+        riderRes.message?.toLowerCase().includes("auth")
+      ) {
         router.replace("/auth/login");
         return;
+      } else {
+        setLoadError(riderRes.message || "Could not load profile.");
+        return;
       }
-      setLoadError(res.message || "Could not load profile.");
+      if (profileRes.success && profileRes.data) {
+        setAccountEmail(profileRes.data.email);
+      }
     }
     load();
     return () => {
@@ -192,8 +202,26 @@ export default function RiderProfilePage() {
         <RiderPageHeader
           badge="Settings"
           title="Profile & availability"
-          description="Control whether you receive new instant assignments and keep your GPS position up to date."
+          description="Control whether you receive new instant assignments, keep your GPS position up to date, and change your sign-in email."
           icon={<ProfileIcon className="h-6 w-6" />}
+        />
+
+        {accountEmail ? (
+          <ChangeEmailSection
+            currentEmail={accountEmail}
+            onEmailChanged={(updated) => setAccountEmail(updated.email)}
+            className={riderCard}
+            inputClassName={riderInputClass}
+            labelClassName={riderLabelClass}
+            buttonClassName={riderBtnPrimary}
+          />
+        ) : null}
+
+        <ChangePasswordSection
+          className={riderCard}
+          inputClassName={riderInputClass}
+          labelClassName={riderLabelClass}
+          buttonClassName={riderBtnPrimary}
         />
 
         <section className={riderCard}>

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getMyProfile, updateMyProfile, type UserProfile } from "@/lib/auth-api";
+import { ChangeEmailSection } from "@/components/ChangeEmailSection";
+import { ChangePasswordSection } from "@/components/ChangePasswordSection";
 
 const inputClass =
   "mt-1.5 block w-full min-h-[44px] rounded-xl border border-purple-200/70 bg-white px-4 py-2.5 text-base text-neutral-900 shadow-sm placeholder:text-neutral-500 transition focus:border-[#81007f] focus:outline-none focus:ring-2 focus:ring-[#81007f]/30 focus:shadow-[0_0_0_3px_rgba(129,0,127,0.12)]";
@@ -270,7 +272,7 @@ export default function ProfileSettingPage() {
           <div>
             <h2 className="text-base font-semibold text-neutral-900">Personal details</h2>
             <p className="mt-1 text-sm text-neutral-500">
-              Update your name and phone. Your email is used to sign in and cannot be changed here.
+              Update your name and phone. Use the section below to change your sign-in email.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -323,21 +325,6 @@ export default function ProfileSettingPage() {
             />
           </div>
 
-          <div>
-            <label htmlFor="email" className={labelClass}>
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={profile?.email ?? ""}
-              readOnly
-              disabled
-              className={`${inputClass} cursor-not-allowed bg-neutral-50 text-neutral-600`}
-            />
-            <p className="mt-1 text-xs text-neutral-500">Contact support to change your email address.</p>
-          </div>
-
           <button
             type="submit"
             disabled={saving || !profile}
@@ -348,17 +335,17 @@ export default function ProfileSettingPage() {
         </form>
       </section>
 
-      <div className="rounded-xl border border-purple-100 bg-white px-4 py-3.5 text-center text-sm text-neutral-600 shadow-sm">
-        <p>
-          Need a new password?{" "}
-          <Link
-            href="/auth/forgot-password"
-            className="font-semibold text-[#81007f] underline-offset-2 hover:underline"
-          >
-            Reset password
-          </Link>
-        </p>
-      </div>
+      {profile && (
+        <ChangeEmailSection
+          currentEmail={profile.email}
+          onEmailChanged={(updated) => {
+            setProfile(updated);
+            setSuccess("Your email has been updated.");
+          }}
+        />
+      )}
+
+      <ChangePasswordSection />
     </div>
   );
 }
