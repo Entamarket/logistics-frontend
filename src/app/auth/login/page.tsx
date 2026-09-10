@@ -7,7 +7,7 @@ import { login } from "@/lib/auth-api";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,9 +16,10 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const res = await login({ email, password });
+    const trimmed = identifier.trim();
+    const res = await login({ identifier: trimmed, password });
     setLoading(false);
-    if (res.success && res.data) {
+    if (res.success && res.data && "role" in res.data) {
       const role = res.data.role;
       const path =
         role === "admin"
@@ -31,7 +32,16 @@ export default function LoginPage() {
       return;
     }
     if (!res.success && res.code === "EMAIL_NOT_VERIFIED") {
-      router.push(`/auth/verify-email?email=${encodeURIComponent(email.trim())}`);
+      const emailForVerify = trimmed.includes("@")
+        ? trimmed
+        : res.data && "email" in res.data
+          ? res.data.email
+          : "";
+      router.push(
+        emailForVerify
+          ? `/auth/verify-email?email=${encodeURIComponent(emailForVerify)}`
+          : "/auth/verify-email"
+      );
       router.refresh();
       return;
     }
@@ -43,33 +53,30 @@ export default function LoginPage() {
       <div className="text-center">
         <h1 className="text-xl sm:text-2xl font-bold text-[#81007f]">Log in</h1>
         <p className="mt-1 text-sm text-neutral-600">
-          Enter your credentials to access your account
+          Enter your email or phone number and password
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         {error && (
-          <div
-            className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700"
-            role="alert"
-          >
+          <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
             {error}
           </div>
         )}
 
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-neutral-700">
-            Email
+          <label htmlFor="identifier" className="block text-sm font-medium text-neutral-700">
+            Email or phone
           </label>
           <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            id="identifier"
+            type="text"
+            autoComplete="username"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
             required
             className="mt-1 block w-full min-h-[44px] rounded-lg border border-neutral-300 px-4 py-2.5 text-base text-neutral-900 placeholder-neutral-400 focus:border-[#81007f] focus:outline-none focus:ring-1 focus:ring-[#81007f]"
-            placeholder="you@example.com"
+            placeholder="you@example.com or +2348012345678"
           />
         </div>
 

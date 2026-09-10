@@ -12,12 +12,13 @@ export interface SignUpBody {
   firstName: string;
   lastName: string;
   email: string;
-  phone: string;
+  phone?: string;
   password: string;
 }
 
 export interface LoginBody {
-  email: string;
+  /** Email address or phone number */
+  identifier: string;
   password: string;
 }
 
@@ -50,7 +51,7 @@ export async function signUp(body: SignUpBody) {
 }
 
 export async function login(body: LoginBody) {
-  return apiPost<AuthUser>("/api/auth/login", body);
+  return apiPost<AuthUser | { email: string }>("/api/auth/login", body);
 }
 
 export async function verifyEmail(body: VerifyEmailBody) {

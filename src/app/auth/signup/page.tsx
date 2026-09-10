@@ -24,7 +24,13 @@ export default function SignUpPage() {
       return;
     }
     setLoading(true);
-    const res = await signUp({ firstName, lastName, email, phone, password });
+    const res = await signUp({
+      firstName,
+      lastName,
+      email,
+      ...(phone.trim() ? { phone: phone.trim() } : {}),
+      password,
+    });
     setLoading(false);
     if (res.success) {
       router.push(`/auth/verify-email?email=${encodeURIComponent(email)}`);
@@ -104,7 +110,7 @@ export default function SignUpPage() {
 
         <div>
           <label htmlFor="phone" className="block text-sm font-medium text-neutral-700">
-            Phone
+            Phone <span className="font-normal text-neutral-500">(optional)</span>
           </label>
           <input
             id="phone"
@@ -112,7 +118,6 @@ export default function SignUpPage() {
             autoComplete="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            required
             className="mt-1 block w-full min-h-[44px] rounded-lg border border-neutral-300 px-4 py-2.5 text-base text-neutral-900 placeholder-neutral-400 focus:border-[#81007f] focus:outline-none focus:ring-1 focus:ring-[#81007f]"
             placeholder="+1234567890"
           />

@@ -14,7 +14,7 @@ export function getWebSocketBaseUrl(): string {
 
 export type ApiResponse<T = unknown> =
   | { success: true; data: T; message?: string }
-  | { success: false; message: string; code?: string };
+  | { success: false; message: string; code?: string; data?: T };
 
 export async function api<T>(
   path: string,
@@ -31,12 +31,13 @@ export async function api<T>(
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const body = json as { message?: string; code?: string };
+    const body = json as { message?: string; code?: string; data?: unknown };
     return {
       success: false,
       message: body.message || res.statusText || "Request failed",
       ...(body.code ? { code: body.code } : {}),
-    };
+      ...(body.data !== undefined ? { data: body.data as T } : {}),
+    } as ApiResponse<T>;
   }
   return json as ApiResponse<T>;
 }
