@@ -10,6 +10,7 @@ import {
 import { getMyProfile } from "@/lib/auth-api";
 import { ChangeEmailSection } from "@/components/ChangeEmailSection";
 import { ChangePasswordSection } from "@/components/ChangePasswordSection";
+import { DeleteAccountSection } from "@/components/DeleteAccountSection";
 import {
   RiderErrorAlert,
   RiderLoadingBlock,
@@ -222,6 +223,12 @@ export default function RiderProfilePage() {
           inputClassName={riderInputClass}
           labelClassName={riderLabelClass}
           buttonClassName={riderBtnPrimary}
+        />
+
+        <DeleteAccountSection
+          className={riderCard}
+          inputClassName={riderInputClass}
+          labelClassName={riderLabelClass}
         />
 
         <section className={riderCard}>

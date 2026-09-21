@@ -116,3 +116,8 @@ export async function resendEmailChangeOTP() {
 export async function changePassword(body: { currentPassword: string; newPassword: string }) {
   return apiPost<unknown>("/api/auth/me/password", body);
 }
+
+/** Permanently delete the authenticated account (requires password). */
+export async function deleteMyAccount(body: { password: string }) {
+  return apiPost<unknown>("/api/auth/me/delete", body);
+}

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getMyProfile, updateMyProfile, type UserProfile } from "@/lib/auth-api";
 import { ChangeEmailSection } from "@/components/ChangeEmailSection";
 import { ChangePasswordSection } from "@/components/ChangePasswordSection";
+import { DeleteAccountSection } from "@/components/DeleteAccountSection";
 
 const inputClass =
   "mt-1.5 block w-full min-h-[44px] rounded-xl border border-purple-200/70 bg-white px-4 py-2.5 text-base text-neutral-900 shadow-sm placeholder:text-neutral-500 transition focus:border-[#81007f] focus:outline-none focus:ring-2 focus:ring-[#81007f]/30";
@@ -160,6 +161,8 @@ export default function AdminSettingsPage() {
           )}
 
           <ChangePasswordSection />
+
+          <DeleteAccountSection />
         </>
       )}
     </div>
