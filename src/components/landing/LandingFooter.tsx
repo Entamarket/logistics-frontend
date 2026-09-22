@@ -18,17 +18,6 @@ function FooterLink({ href, children }: { href: string; children: ReactNode }) {
   );
 }
 
-function FooterAnchor({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <a
-      href={href}
-      className="text-sm text-neutral-400 transition hover:text-white"
-    >
-      {children}
-    </a>
-  );
-}
-
 export function LandingFooter() {
   const year = new Date().getFullYear();
 
@@ -41,7 +30,7 @@ export function LandingFooter() {
 
       <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-16">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-12 lg:gap-8">
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-3">
             <LandingBrand variant="footer" />
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-neutral-400">
               Smart logistics for Nigeria — instant rider matching, live tracking,
@@ -49,19 +38,19 @@ export function LandingFooter() {
             </p>
           </div>
 
-          <div className="lg:col-span-2 lg:col-start-6">
+          <div className="lg:col-span-2 lg:col-start-5">
             <p className="text-xs font-bold uppercase tracking-widest text-neutral-500">
               Product
             </p>
             <ul className="mt-4 space-y-3">
               <li>
-                <FooterAnchor href="#features">Features</FooterAnchor>
+                <FooterLink href="/#features">Features</FooterLink>
               </li>
               <li>
-                <FooterAnchor href="#how-it-works">How it works</FooterAnchor>
+                <FooterLink href="/#how-it-works">How it works</FooterLink>
               </li>
               <li>
-                <FooterAnchor href="#roles">For everyone</FooterAnchor>
+                <FooterLink href="/#roles">For everyone</FooterLink>
               </li>
               <li>
                 <FooterLink href="/auth/signup">Get started</FooterLink>
@@ -89,6 +78,20 @@ export function LandingFooter() {
             </ul>
           </div>
 
+          <div className="lg:col-span-2">
+            <p className="text-xs font-bold uppercase tracking-widest text-neutral-500">
+              Legal
+            </p>
+            <ul className="mt-4 space-y-3">
+              <li>
+                <FooterLink href="/privacy">Privacy Policy</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/terms">Terms of Service</FooterLink>
+              </li>
+            </ul>
+          </div>
+
           <div className="lg:col-span-3">
             <p className="text-xs font-bold uppercase tracking-widest text-neutral-500">
               Contact
@@ -111,7 +114,7 @@ export function LandingFooter() {
                 </a>
               </li>
               <li>
-                <FooterAnchor href="#contact">Send a message</FooterAnchor>
+                <FooterLink href="/#contact">Send a message</FooterLink>
               </li>
               <li className="text-sm text-neutral-500">Lagos, Nigeria</li>
             </ul>
@@ -122,10 +125,14 @@ export function LandingFooter() {
           <p className="text-sm text-neutral-500">
             © {year} Entamarket Logistics. All rights reserved.
           </p>
-          <p className="text-sm text-neutral-600">
-            Powered by{" "}
-            <span className="font-semibold text-neutral-400">EntaMarket</span>
-          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+            <FooterLink href="/privacy">Privacy Policy</FooterLink>
+            <FooterLink href="/terms">Terms of Service</FooterLink>
+            <p className="text-sm text-neutral-600">
+              Powered by{" "}
+              <span className="font-semibold text-neutral-400">EntaMarket</span>
+            </p>
+          </div>
         </div>
       </div>
     </footer>
