@@ -483,3 +483,36 @@ export async function getAdminRiderPerformance(riderId: string, months = 12) {
   const q = months !== 12 ? `?months=${encodeURIComponent(String(months))}` : "";
   return apiGet<RiderPerformance>(`/api/admin/riders/${encodeURIComponent(riderId)}/performance${q}`);
 }
+
+export interface AdminUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  role: "admin";
+  status: string;
+  isEmailVerified: boolean;
+  createdAt: string;
+}
+
+export interface CreateAdminPayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  phone?: string;
+}
+
+export function getAdminUserDisplayName(admin: Pick<AdminUser, "firstName" | "lastName" | "email">): string {
+  const name = `${admin.firstName} ${admin.lastName}`.trim();
+  return name || admin.email || "—";
+}
+
+export async function getAdmins() {
+  return apiGet<AdminUser[]>("/api/admin/admins");
+}
+
+export async function createAdmin(payload: CreateAdminPayload) {
+  return apiPost<AdminUser>("/api/admin/admins", payload);
+}

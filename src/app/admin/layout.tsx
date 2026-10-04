@@ -14,6 +14,7 @@ const adminNavItems = [
   { href: "/admin/complaints", label: "Complaints" },
   { href: "/admin/messages", label: "Messages" },
   { href: "/admin/notifications", label: "Notifications" },
+  { href: "/admin/admins", label: "Admins" },
   { href: "/admin/settings", label: "Settings" },
 ];
 
