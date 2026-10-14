@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getShipments, confirmShipmentReceipt, type ShipmentData } from "@/lib/shipment-api";
 import { formatContactLocation } from "@/lib/location-data";
-import { ClientActiveShipmentMap } from "@/components/maps/ClientActiveShipmentMap";
 
 const TERMINAL_STATUSES = new Set(["delivered", "cancelled"]);
 
@@ -238,13 +238,6 @@ export default function ActiveShipmentPage() {
                   </div>
                 )}
 
-                {s.riderID && s.status !== "delivered" && s.status !== "cancelled" && (
-                  <div className="overflow-hidden rounded-xl border border-purple-100 bg-gradient-to-b from-purple-50/60 to-white p-3 shadow-inner">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#81007f]">Live tracking</p>
-                    <ClientActiveShipmentMap shipment={s} />
-                  </div>
-                )}
-
                 {CONFIRMABLE_STATUSES.has(s.status) ? (
                   <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 shadow-sm">
                     <p className="text-sm font-semibold text-emerald-900">Delivery confirmation</p>
@@ -292,6 +285,14 @@ export default function ActiveShipmentPage() {
                     </p>
                   </div>
                 </div>
+
+                <Link
+                  href={`/dashboard/shipments/${s._id}`}
+                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border-2 border-[#81007f]/40 bg-white px-4 text-sm font-semibold text-[#81007f] transition hover:border-[#81007f] hover:bg-purple-50"
+                >
+                  View details & live map
+                  <span aria-hidden>→</span>
+                </Link>
               </div>
             </li>
           ))}

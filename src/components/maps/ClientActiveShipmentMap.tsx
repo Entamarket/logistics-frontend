@@ -15,12 +15,20 @@ function clientActiveLeg(status: string): "to_pickup" | "to_dropoff" {
   return "to_pickup";
 }
 
-export function ClientActiveShipmentMap({ shipment }: { shipment: ShipmentData }) {
+export function ClientActiveShipmentMap({
+  shipment,
+  height = "260px",
+}: {
+  shipment: ShipmentData;
+  height?: string;
+}) {
   const { riderLocationByShipmentId } = useNotifications();
   const ws = riderLocationByShipmentId[shipment._id];
   const [polled, setPolled] = useState<{ longitude: number; latitude: number } | null>(null);
+  const hasRider = Boolean(shipment.riderID);
 
   useEffect(() => {
+    if (!hasRider) return;
     let cancelled = false;
     async function poll() {
       const res = await getShipmentTracking(shipment._id);
@@ -36,21 +44,24 @@ export function ClientActiveShipmentMap({ shipment }: { shipment: ShipmentData }
       cancelled = true;
       clearInterval(t);
     };
-  }, [shipment._id]);
+  }, [shipment._id, hasRider]);
 
-  const riderMapPos = ws
-    ? { lat: ws.latitude, lng: ws.longitude }
-    : polled
-      ? { lat: polled.latitude, lng: polled.longitude }
-      : null;
+  const riderMapPos = !hasRider
+    ? null
+    : ws
+      ? { lat: ws.latitude, lng: ws.longitude }
+      : polled
+        ? { lat: polled.latitude, lng: polled.longitude }
+        : null;
 
   const pickup = toMapLatLng(shipment.pickupLongitude, shipment.pickupLatitude);
   const recipient = toMapLatLng(shipment.recipientLongitude, shipment.recipientLatitude);
 
   const leg = clientActiveLeg(shipment.status);
 
-  const journeyLabel =
-    leg === "to_pickup"
+  const journeyLabel = !hasRider
+    ? "A rider has not been assigned yet. The map shows your pickup and drop-off points."
+    : leg === "to_pickup"
       ? "Rider is heading to the pickup address."
       : "Rider is heading to the drop-off address.";
 
@@ -64,7 +75,7 @@ export function ClientActiveShipmentMap({ shipment }: { shipment: ShipmentData }
         recipientAddress={recipient ? undefined : shipment.recipientDetails.address}
         activeLeg={leg}
         showDirections
-        height="260px"
+        height={height}
       />
     </div>
   );

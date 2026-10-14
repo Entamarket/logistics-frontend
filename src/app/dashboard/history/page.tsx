@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { getShipments, type ShipmentData } from "@/lib/shipment-api";
 import { formatContactLocation } from "@/lib/location-data";
 import { createFeedback, getMyFeedback, type FeedbackData } from "@/lib/feedback-api";
@@ -257,6 +258,14 @@ export default function ShipmentHistoryPage() {
                     </p>
                   </div>
                 </div>
+
+                <Link
+                  href={`/dashboard/shipments/${s._id}`}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#81007f] hover:underline"
+                >
+                  View details
+                  <span aria-hidden>→</span>
+                </Link>
 
                 {s.status === "delivered" && s.riderID && (
                   <div className="border-t border-purple-100/80 pt-4">

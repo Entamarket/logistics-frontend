@@ -90,9 +90,19 @@ function ShipmentMapInner({
         style={{ width: "100%", height: "100%" }}
         reuseMaps
       >
-        {pickup ? <Marker position={pickup} title="Pickup" /> : null}
-        {effectiveRecipient ? <Marker position={effectiveRecipient} title="Drop-off" /> : null}
-        {rider ? <Marker position={rider} title="Rider" /> : null}
+        {pickup ? (
+          <Marker position={pickup} title="Pickup" label={{ text: "P", color: "#ffffff", fontWeight: "700" }} />
+        ) : null}
+        {effectiveRecipient ? (
+          <Marker
+            position={effectiveRecipient}
+            title="Drop-off"
+            label={{ text: "D", color: "#ffffff", fontWeight: "700" }}
+          />
+        ) : null}
+        {rider ? (
+          <Marker position={rider} title="Rider" label={{ text: "R", color: "#ffffff", fontWeight: "700" }} />
+        ) : null}
         {canDirections && rider && routeDestination ? (
           <DirectionsLayer origin={rider} destination={routeDestination} suppressMarkers />
         ) : null}

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { getPublicShipmentStatus, type PublicShipmentStatus } from "@/lib/shipment-api";
 import { formatShipmentStatus, landingShipmentStatusClass } from "@/lib/shipment-status";
 
@@ -111,6 +112,13 @@ export function HeroShipmentTracker() {
                 timeStyle: "short",
               })}
             </p>
+            <Link
+              href={`/track/${encodeURIComponent(result.shipmentId)}`}
+              className="mt-3 inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6a0068] to-[#81007f] px-4 text-sm font-semibold text-white shadow-[0_4px_16px_rgba(129,0,127,0.3)] transition hover:shadow-[0_6px_22px_rgba(129,0,127,0.4)]"
+            >
+              View live tracking
+              <span aria-hidden>→</span>
+            </Link>
           </div>
         ) : null}
       </div>

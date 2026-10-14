@@ -81,6 +81,10 @@ export async function getShipments() {
   return apiGet<ShipmentData[]>("/api/shipments");
 }
 
+export async function getShipmentById(id: string) {
+  return apiGet<ShipmentData>(`/api/shipments/${encodeURIComponent(id)}`);
+}
+
 /** Rider-only: shipments assigned to the logged-in rider. scope=active|history|all */
 export async function getRiderShipments(scope: "active" | "history" | "all" = "active") {
   const q = scope === "active" ? "" : `?scope=${encodeURIComponent(scope)}`;
@@ -190,7 +194,10 @@ export interface PublicShipmentStatus {
   shipmentId: string;
   status: string;
   deliveryType: string;
+  paymentStatus: string;
   updatedAt: string;
+  dropoff: { longitude: number; latitude: number } | null;
+  rider: { longitude: number; latitude: number; updatedAt: string | null } | null;
 }
 
 /** Public lookup — no login required (landing page tracker). */
