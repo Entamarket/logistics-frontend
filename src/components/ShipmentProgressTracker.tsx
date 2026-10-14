@@ -78,18 +78,26 @@ export function ShipmentProgressTracker({
         />
       </div>
 
-      <ol className="mt-5 grid grid-cols-6 gap-1">
+      <ol className="mt-5 grid grid-cols-6">
         {STEPS.map((label, i) => {
           const done = i < current || (isComplete && i === current);
           const active = i === current && !isComplete;
           return (
             <li
               key={label}
-              className="flex flex-col items-center text-center"
+              className="relative flex flex-col items-center px-0.5 text-center"
               aria-current={active ? "step" : undefined}
             >
+              {i < STEPS.length - 1 && (
+                <span
+                  aria-hidden
+                  className={`absolute left-1/2 top-4 h-0.5 w-full -translate-y-1/2 transition-colors duration-500 ${
+                    i < current ? "bg-[#81007f]" : "bg-neutral-200"
+                  }`}
+                />
+              )}
               <span
-                className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition ${
+                className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 transition ${
                   done
                     ? "border-[#81007f] bg-[#81007f] text-white"
                     : active
